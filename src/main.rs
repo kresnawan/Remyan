@@ -1,17 +1,19 @@
+use std::collections::HashMap;
+
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-#[derive(Debug, EnumIter)]
+#[derive(Debug, EnumIter, Clone)]
 enum CourtType {
     Jack,
     Queen,
-    King
+    King,
 }
 
 #[derive(Debug, EnumIter, Clone, Copy)]
 enum JokerType {
     Red,
-    Black
+    Black,
 }
 
 #[derive(Debug, EnumIter, Clone, Copy)]
@@ -19,18 +21,18 @@ enum CardIcon {
     Heart,
     Diamond,
     Spade,
-    Club
+    Club,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum CardType {
     Ace,
     Court(CourtType),
     Spot(SpotNumber),
-    Joker(JokerType)
+    Joker(JokerType),
 }
 
-#[derive(Debug, EnumIter)]
+#[derive(Debug, EnumIter, Clone)]
 enum SpotNumber {
     Two,
     Three,
@@ -40,33 +42,47 @@ enum SpotNumber {
     Seven,
     Eight,
     Nine,
-    Ten
+    Ten,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Card {
-    card_icon: Option<CardIcon>,
-    card_type: CardType,
+    pub card_icon: Option<CardIcon>,
+    pub card_type: CardType,
 }
 
 impl Card {
-    pub fn generate_full_deck() -> Vec<Card> {
+    pub fn generate_deck(with_joker: bool) -> Vec<Self> {
         let mut deck: Vec<Card> = Vec::new();
 
         for i in CardIcon::iter() {
-            deck.push(Card{ card_icon: Some(i.clone()), card_type: CardType::Ace });
+            deck.push(Card {
+                card_icon: Some(i.clone()),
+                card_type: CardType::Ace,
+            });
 
             for court_type in CourtType::iter() {
-                deck.push(Card { card_icon: Some(i.clone()), card_type: CardType::Court(court_type) });
+                deck.push(Card {
+                    card_icon: Some(i.clone()),
+                    card_type: CardType::Court(court_type),
+                });
             }
 
             for spot_number in SpotNumber::iter() {
-                deck.push(Card { card_icon: Some(i.clone()), card_type: CardType::Spot(spot_number) });
+                deck.push(Card {
+                    card_icon: Some(i.clone()),
+                    card_type: CardType::Spot(spot_number),
+                });
             }
         }
 
-        for joker_type in JokerType::iter() {
-            deck.push(Card { card_icon: None, card_type: CardType::Joker(joker_type.clone()) });
+        if with_joker {
+            for joker_type in JokerType::iter() {
+                deck.push(Card {
+                    card_icon: None,
+                    card_type: CardType::Joker(joker_type.clone()),
+                });
+            }
         }
 
         return deck;
@@ -75,101 +91,194 @@ impl Card {
         match &self.card_type {
             CardType::Joker(_) => {
                 return 25;
-            },
+            }
             CardType::Ace => {
                 return 15;
-            },
-            CardType::Court(n) => {
+            }
+            CardType::Court(_) => {
                 return 10;
-            },
-            CardType::Spot(n) => {
+            }
+            CardType::Spot(_) => {
                 return 5;
             }
         }
     }
 }
 
+enum PlayerStatus {
+    Online,
+    Away,
+    Offline,
+}
+
 struct Player {
-    uname: String,
+    player_id: u32,
+    status: PlayerStatus,
 }
 
-struct GamePlayer {
-    player: Player,
+struct SessionPlayer {
+    player_id: u32,
 }
 
-struct CardGame {
-    players: Vec<GamePlayer>,
-    kartu_guakan: Vec<Card>,
-    bookie: Player,
-    config: CardGameConfig
+struct SessionPlayerScoreLogRow {
+    player_id: u32,
+    score: i32,
 }
 
-impl CardGame {
-    fn start_game(cfg: CardGameConfig) {
-        
+struct GameSession {
+    session_id: u32,
+    games: Vec<CardGame>,
+    players: Vec<SessionPlayer>,
+    config: SessionConfig,
+    session_admin_index: usize,
+    player_score_table: Vec<SessionPlayerScoreLogRow>,
+}
 
+impl GameSession {
+    pub fn new(session_id: u32, cfg: SessionConfig, host_id: u32) -> Self {
+        let new_session_player = SessionPlayer { player_id: host_id };
+        Self {
+            session_id: session_id,
+            games: vec![],
+            players: vec![new_session_player],
+            config: cfg,
+            session_admin_index: 0,
+            player_score_table: Vec::new(),
+        }
     }
 }
 
-struct CardGameConfig {
-    players: Vec<GamePlayer>,
+struct CardGame {
+    kartu_guakan: Vec<Card>,
+    bookie: Player,
+}
+
+#[derive(Clone)]
+struct SessionConfig {
     boleh_timpa_jqk: bool,
     tutukan_bebas: bool,
     boleh_ngerail: bool,
     with_joker: bool,
-    joker_type: Option<Card>
+    joker_type: Option<Card>,
 }
 
-impl CardGameConfig {
+impl SessionConfig {
     pub fn create(
-        players: Vec<Player>,
-        boleh_timpa_jqk: bool, 
-        tutukan_bebas: bool, boleh_ngerail:bool, 
+        boleh_timpa_jqk: bool,
+        tutukan_bebas: bool,
+        boleh_ngerail: bool,
         with_joker: bool,
-        joker_type: Option<Card>
-    ) -> Result<CardGameConfig, String> {
+        joker_type: Option<Card>,
+    ) -> Result<Self, String> {
+        // if player_count < 3 || player_count > 4 {
+        //     return Err(String::from("Jumlah player antara 3 atau 4"));
+        // }
 
-        let player_count = players.len();
-
-        if player_count < 3 || player_count > 4 {
-            return Err(String::from("Jumlah player antara 3 atau 4"));
-        }
-
-        let mut cfg = Self { 
-            players: vec![], 
-            boleh_timpa_jqk: boleh_timpa_jqk, 
-            tutukan_bebas: tutukan_bebas, 
-            boleh_ngerail: boleh_ngerail, 
+        let mut cfg = Self {
+            boleh_timpa_jqk: boleh_timpa_jqk,
+            tutukan_bebas: tutukan_bebas,
+            boleh_ngerail: boleh_ngerail,
             with_joker: with_joker,
-            joker_type: None, 
+            joker_type: None,
         };
 
-        for i in players {
-            cfg.players.push(GamePlayer { player: i });
-        }
-
-        match joker_type {
-            Some(n) => {
-                match n.card_type {
+        if with_joker {
+            match joker_type {
+                Some(n) => match n.card_type {
                     CardType::Spot(_) => {
                         cfg.joker_type = Some(n);
-                    },
-                    _ => {
-                        return Err(String::from("Tipe joker harus angka biasa"))
                     }
-                }
+                    _ => return Err(String::from("Tipe joker harus angka biasa")),
+                },
+                None => {}
             }
-            None => {}
         }
 
         Ok(cfg)
     }
 }
 
+struct App {
+    session_manager: SessionManager,
+    players: HashMap<u32, Player>,
+}
 
+impl App {
+    pub fn put_player_to_session(&mut self, player_id: u32, session_id: u32) -> Result<(), String> {
+        if !self.players.contains_key(&player_id) {
+            return Err(format!("Player dengan ID {} tidak ada", player_id));
+        }
+
+        if self.session_manager.check_if_player_in_a_session(player_id) {
+            return Err(format!(
+                "Player dengan ID {} sudah masuk di session",
+                player_id
+            ));
+        }
+
+        match self
+            .session_manager
+            .put_player_in_session(player_id, session_id)
+        {
+            Err(err) => {
+                return Err(err);
+            }
+
+            Ok(_) => return Ok(()),
+        }
+    }
+}
+
+struct SessionManager {
+    sessions: HashMap<u32, GameSession>,
+
+    // <PlayerId, SessionId>
+    session_players: HashMap<u32, u32>,
+}
+
+impl SessionManager {
+    pub fn create_session(
+        &mut self,
+        session_id: u32,
+        host_id: u32,
+        cfg: SessionConfig,
+    ) -> Result<(), String> {
+        if self.check_if_player_in_a_session(host_id) {
+            return Err(format!(
+                "Gagal membuat sesi karena player {} masih di sesi lain",
+                host_id
+            ));
+        }
+
+        let new_session = GameSession::new(session_id, cfg, host_id);
+        self.session_players.insert(host_id, session_id);
+        self.sessions.insert(session_id, new_session);
+
+        Ok(())
+    }
+
+    pub fn check_if_player_in_a_session(&self, player_id: u32) -> bool {
+        self.session_players.contains_key(&player_id)
+    }
+
+    pub fn put_player_in_session(&mut self, player_id: u32, session_id: u32) -> Result<(), String> {
+        let result = self.session_players.insert(player_id, session_id);
+
+        match result {
+            Some(_) => {
+                return Ok(());
+            }
+            None => {
+                return Err(format!(
+                    "Terjadi kegagalan saat memasukkan player kedalam session"
+                ));
+            }
+        }
+    }
+}
 
 fn main() {
-    let deck = Card::generate_full_deck();
+    let deck = Card::generate_deck(false);
     println!("{:#?}", deck);
     println!("{}", deck.len());
 }
