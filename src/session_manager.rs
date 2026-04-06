@@ -1,6 +1,7 @@
 use crate::{Session, SessionConfig};
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub struct SessionManager {
     pub sessions: HashMap<u32, Session>,
 

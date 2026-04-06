@@ -1,5 +1,6 @@
 use crate::{CardGame, SessionConfig};
 
+#[derive(Debug)]
 pub struct Session {
     pub session_id: u32,
     pub games: Vec<CardGame>,
@@ -10,10 +11,12 @@ pub struct Session {
     pub currently_playing: bool,
 }
 
+#[derive(Debug)]
 pub struct SessionPlayer {
     pub player_id: u32,
 }
 
+#[derive(Debug)]
 pub struct SessionPlayerScoreLogRow {
     pub player_id: u32,
     pub score: i32,
