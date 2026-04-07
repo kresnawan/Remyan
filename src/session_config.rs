@@ -1,6 +1,6 @@
 use crate::{Card, CardType};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub struct SessionConfig {
     pub allow_court_stacking: bool,
     pub free_hit: bool,
@@ -35,7 +35,7 @@ impl SessionConfig {
                     CardType::Spot(_) => {
                         cfg.joker_type = Some(n);
                     }
-                    _ => return Err(String::from("Tipe joker harus angka biasa")),
+                    _ => return Err(String::from("Tipe joker harus angka biasa [Create Session Config gagal]")),
                 },
                 None => {}
             }
