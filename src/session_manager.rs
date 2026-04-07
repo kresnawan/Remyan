@@ -16,6 +16,17 @@ impl SessionManager {
         host_id: u32,
         cfg: SessionConfig,
     ) -> Result<(), String> {
+        if self.sessions.contains_key(&session_id) {
+            return Err(format!("ID session {} telah dipakai", session_id));
+        }
+
+        if self.check_if_player_in_a_session(host_id) {
+            return Err(format!(
+                "Player dengan ID {} sudah masuk di session",
+                host_id
+            ));
+        }
+
         let new_session = Session::new(session_id, cfg, host_id);
 
         match new_session {
@@ -35,17 +46,36 @@ impl SessionManager {
         self.session_players.contains_key(&player_id)
     }
 
+    pub fn handle_session_game_start(&mut self, session_id: u32, game_id: u32) -> Result<(), String> {
+        let session = self.sessions.get_mut(&session_id).unwrap();
+        match session.start_new_game(game_id) {
+            Ok(_) => {
+                return Ok(())
+            },
+            Err(err) => {
+                return Err(err)
+            }
+        }
+    }
+
     pub fn put_player_in_session(&mut self, player_id: u32, session_id: u32) -> Result<(), String> {
+        if self.check_if_player_in_a_session(player_id) {
+            return Err(format!(
+                "Player dengan ID {} sudah masuk di session",
+                player_id
+            ));
+        }
+
         let result = self.session_players.insert(player_id, session_id);
 
         match result {
             Some(_) => {
-                return Ok(());
+                return Err(format!(
+                    "Terjadi kesalahan saat memasukkan player kedalam session"
+                ));
             }
             None => {
-                return Err(format!(
-                    "Terjadi kegagalan saat memasukkan player kedalam session"
-                ));
+                return Ok(());
             }
         }
     }
