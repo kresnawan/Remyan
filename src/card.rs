@@ -1,6 +1,6 @@
 use strum_macros::EnumIter;
 
-#[derive(Debug, EnumIter, Clone)]
+#[derive(Debug, EnumIter, Clone, Copy)]
 pub enum CourtType {
     Jack,
     Queen,
@@ -21,7 +21,7 @@ pub enum CardIcon {
     Club,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum CardType {
     Ace,
     Court(CourtType),
@@ -29,7 +29,7 @@ pub enum CardType {
     Joker(JokerType),
 }
 
-#[derive(Debug, EnumIter, Clone)]
+#[derive(Debug, EnumIter, Clone, Copy)]
 pub enum SpotNumber {
     Two,
     Three,
@@ -42,7 +42,7 @@ pub enum SpotNumber {
     Ten,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Card {
     pub card_icon: Option<CardIcon>,
     pub card_type: CardType,
