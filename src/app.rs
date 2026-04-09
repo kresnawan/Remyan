@@ -30,6 +30,8 @@ impl App {
                 let new_player = Player::new(uname);
                 self.players.insert(id, new_player);
 
+                println!("[PLAYER TEREGISTRASI] PlayerId: {}", id);
+
                 return Ok(());
             }
         }
@@ -101,11 +103,11 @@ impl App {
         match self.get_player_status(host_id) {
             Some(n) => match n {
                 PlayerStatus::Offline => {
-                    return Err(format!("Player dengan ID {} sedang offline", host_id));
+                    return Err(format!("[SESSION GAGAL DIBUAT] Player dengan ID {} sedang offline", host_id));
                 }
                 _ => {}
             },
-            None => return Err(format!("Player dengan ID {} belum teregistrasi", host_id)),
+            None => return Err(format!("[SESSION GAGAL DIBUAT] Player dengan ID {} belum teregistrasi", host_id)),
         }
 
         let res = self

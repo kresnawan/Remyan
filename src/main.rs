@@ -14,28 +14,11 @@ fn main() {
         .register_new_player(22, String::from("Martin"))
         .unwrap();
 
-    match instance.create_session(
+    instance.handle_login(22).unwrap_or_else(|err| println!("{}", err));
+
+    instance.create_session(
         1,
-        21,
+        22,
         SessionConfig::new(true, true, false, false, None).unwrap(),
-    ) {
-        Ok(_) => {}
-        Err(err) => {
-            println!("{}", err);
-        }
-    }
-
-    match instance.create_session(
-        1,
-        23,
-        SessionConfig::new(true, true, true, true, None).unwrap(),
-    ) {
-        Ok(_) => {}
-        Err(err) => {
-            println!("{}", err);
-        }
-    }
-
-    println!("{:#?}", instance.players);
-    println!("{:#?}", instance.session_manager);
+    ).unwrap_or_else(|err| println!("{}", err));
 }

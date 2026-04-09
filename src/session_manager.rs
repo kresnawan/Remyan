@@ -17,12 +17,12 @@ impl SessionManager {
         cfg: SessionConfig,
     ) -> Result<(), String> {
         if self.sessions.contains_key(&session_id) {
-            return Err(format!("ID session {} telah dipakai", session_id));
+            return Err(format!("[SESSION GAGAL DIBUAT] ID session {} telah dipakai", session_id));
         }
 
         if self.check_if_player_in_a_session(host_id) {
             return Err(format!(
-                "Player dengan ID {} sudah masuk di session",
+                "[SESSION GAGAL DIBUAT] Player dengan ID {} sudah masuk di session",
                 host_id
             ));
         }
@@ -33,6 +33,8 @@ impl SessionManager {
             Ok(n) => {
                 self.session_players.insert(host_id, session_id);
                 self.sessions.insert(session_id, n);
+
+                println!("[SESSION DIBUAT] Id: {}", session_id);
 
                 Ok(())
             }
@@ -50,6 +52,7 @@ impl SessionManager {
         let session = self.sessions.get_mut(&session_id).unwrap();
         match session.start_new_game(game_id) {
             Ok(_) => {
+                println!("[GAME DIMULAI] SessionId: {}, GameId: {}", session_id, game_id);
                 return Ok(())
             },
             Err(err) => {
@@ -66,16 +69,30 @@ impl SessionManager {
             ));
         }
 
-        let result = self.session_players.insert(player_id, session_id);
+        let insert_session_players_result = self.session_players.insert(
+            player_id, 
+            session_id
+        );
+        let insert_session_player_result = self.sessions.get_mut(&session_id).unwrap().put_player_in_session(player_id);
 
-        match result {
+
+        match insert_session_players_result {
             Some(_) => {
                 return Err(format!(
                     "Terjadi kesalahan saat memasukkan player kedalam session"
                 ));
             }
             None => {
-                return Ok(());
+                match insert_session_player_result {
+                    Ok(_) => {
+                        println!("[PLAYER MASUK SESSION] PlayerId: {}, SessionId: {}", player_id, session_id);
+                        return Ok(());
+                    }
+                    Err(err) => {
+                        return Err(err);
+                    }
+                }
+                
             }
         }
     }

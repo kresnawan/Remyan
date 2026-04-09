@@ -13,6 +13,7 @@ pub struct Session {
     pub config: SessionConfig,
     pub session_host_index: usize,
     pub currently_playing: bool,
+    pub current_turn: usize
 }
 
 #[derive(Debug)]
@@ -26,7 +27,7 @@ impl Session {
     pub fn new(session_id: u32, cfg: SessionConfig, host_id: u32) -> Result<Self, String> {
         let new_session_player = SessionPlayer { player_id: host_id, current_score: 0, card_stack: Vec::new() };
         let deck = Deck::new(cfg.with_joker);
-        
+
         return Ok(Self {
             deck: deck,
             stock_pile: Vec::new(),
@@ -37,10 +38,11 @@ impl Session {
             config: cfg,
             session_host_index: 0,
             currently_playing: false,
+            current_turn: 0
         });
     }
 
-    fn share_cards(&mut self, with_joker: bool) {
+    fn share_cards(&mut self) {
         self.deck.shuffle();
         // Share cards
         for i in &mut self.players {
@@ -51,25 +53,25 @@ impl Session {
         }
 
         // Put all cards left into the stock pile
-        for i in &self.deck.cards {
-            self.stock_pile.push(*i);
+        while let Some(n) = self.deck.cards.pop() {
+            self.stock_pile.push(n);
         }
     }
     
     pub fn start_new_game(&mut self, game_id: u32) -> Result<(), String> {
 
+        // Start
         if self.currently_playing {
-            return Err(format!("Sesi dengan ID {} saat ini sedang bermain [Start Game gagal]", self.session_id));
+            return Err(format!("[START GAME GAGAL] Sesi dengan ID {} saat ini sedang bermain", self.session_id));
         }
 
         if self.players.len() < 3 {
-            return Err(format!("Sesi dengan ID {} kekurangan setidaknya {} pemain [Start Game gagal]", self.session_id, 3 - self.players.len()));
+            return Err(format!("[START GAME GAGAL] Sesi dengan ID {} kekurangan setidaknya {} pemain", self.session_id, 3 - self.players.len()));
         }
 
         println!("Game dimulai");
         self.currently_playing = true;
-
-        self.share_cards(self.config.with_joker);
+        self.share_cards();
 
         if self.games.len() == 0 {
             let game = CardGame::new(self.config, self.players[self.session_host_index].player_id);
@@ -79,10 +81,12 @@ impl Session {
 
 
         // End game
+        self.deck = Deck { cards: Vec::new() };
         self.discard_pile = Vec::new();
         self.stock_pile = Vec::new();
-        println!("Game telah selesai");
         self.currently_playing = false;
+
+        println!("Game telah selesai");
         return Ok(());
         
     }
@@ -95,5 +99,51 @@ impl Session {
         self.players.push(new_session_player);
 
         Ok(())
+    }
+
+    fn get_session_player_mut(&mut self, player_id: u32) -> Option<&mut SessionPlayer> {
+        self.players.iter_mut().find(|e| e.player_id == player_id)
+    }
+
+    fn get_session_player(&self, player_id: u32) -> Option<&SessionPlayer> {
+        self.players.iter().find(|e| e.player_id == player_id)
+    }
+
+    fn handle_draw_player_card(&mut self, player_id: u32, draw_source: u8) {
+        if draw_source == 0 {
+            let card = self.stock_pile.pop().unwrap();
+            self.get_session_player_mut(player_id).unwrap().card_stack.push(card);
+        } else if draw_source == 1 {
+            let mut current_discard_stack = self.discard_pile.iter().rev();
+            for i in 0..self.players.len() {
+                let item = current_discard_stack.next();
+                // Handle draws from discard pile
+            }
+        }
+    }
+
+    fn next_turn(&mut self) {
+        if self.current_turn == self.players.len() - 1 {
+            self.current_turn = 0;
+        } else {
+            self.current_turn += 1;
+        }
+    }
+
+    pub fn handle_turn(&mut self, player_id: u32) -> Result<(), String> {
+        if let Some(n) = self.get_session_player(player_id) {
+            if self.players[self.current_turn].player_id == player_id {
+                // Handle player's turn
+
+                self.stock_pile.pop().unwrap();
+
+                self.next_turn();
+                return Ok(());
+            } else {
+                return Err(format!("[TURN GAGAL] PlayerId belum saatnya bermain"));
+            }
+        } else {
+            return Err(format!("[TURN GAGAL] Player tidak ditemukan di session"));
+        }
     }
 }
