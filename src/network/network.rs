@@ -10,7 +10,7 @@ use axum::{
         ws::{Message, WebSocket},
     },
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::{IntoResponse},
     routing::{get, post},
 };
 use axum_extra::extract::{CookieJar, cookie::Cookie};

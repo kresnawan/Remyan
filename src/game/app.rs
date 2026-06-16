@@ -65,13 +65,11 @@ impl App {
         //     None => return Err(format!("Player dengan id {} tidak terdaftar", player_id)),
         // }
 
-        match self.room_manager.put_player_in_room(player_id, room_id) {
-            Err(err) => {
-                return Err(err);
-            }
-
-            Ok(_) => return Ok(()),
+        if let Err(e) = self.room_manager.put_player_in_room(player_id, room_id) {
+            return Err(e);
         }
+
+        return Ok(());
     }
 
     pub fn handle_login(&mut self, player_id: u32) -> Result<(), String> {

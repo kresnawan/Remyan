@@ -72,7 +72,7 @@ impl Room {
         }
     }
 
-    pub fn start_new_game(&mut self, game_id: u32) -> Result<(), String> {
+    pub fn start_game(&mut self, game_id: u32) -> Result<(), String> {
         // Start
         if self.currently_playing {
             return Err(format!(
@@ -102,10 +102,10 @@ impl Room {
         return Ok(());
     }
 
-    pub fn put_player_in_room(&mut self, player_id: u32) -> Result<(), String> {
+    pub fn insert_player(&mut self, player_id: u32) -> Result<(), String> {
         if self.players.len() >= 4 {
             return Err(String::from(
-                "Dalam satu session hanya memuat maksimal 4 player [Put Player in Session gagal]",
+                "Dalam satu session hanya memuat maksimal 4 player",
             ));
         }
         let new_session_player = RoomPlayer {
