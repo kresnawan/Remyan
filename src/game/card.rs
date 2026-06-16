@@ -1,19 +1,20 @@
+use serde::Deserialize;
 use strum_macros::EnumIter;
 
-#[derive(Debug, EnumIter, Clone, Copy)]
+#[derive(Debug, EnumIter, Clone, Copy, Deserialize)]
 pub enum CourtType {
     Jack,
     Queen,
     King,
 }
 
-#[derive(Debug, EnumIter, Clone, Copy)]
+#[derive(Debug, EnumIter, Clone, Copy, Deserialize)]
 pub enum JokerType {
     Red,
     Black,
 }
 
-#[derive(Debug, EnumIter, Clone, Copy)]
+#[derive(Debug, EnumIter, Clone, Copy, Deserialize)]
 pub enum CardIcon {
     Heart,
     Diamond,
@@ -21,7 +22,7 @@ pub enum CardIcon {
     Club,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 pub enum CardType {
     Ace,
     Court(CourtType),
@@ -29,7 +30,7 @@ pub enum CardType {
     Joker(JokerType),
 }
 
-#[derive(Debug, EnumIter, Clone, Copy)]
+#[derive(Debug, EnumIter, Clone, Copy, Deserialize)]
 pub enum SpotNumber {
     Two,
     Three,
@@ -42,7 +43,7 @@ pub enum SpotNumber {
     Ten,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 pub struct Card {
     pub card_icon: Option<CardIcon>,
     pub card_type: CardType,

@@ -1,17 +1,18 @@
 use std::collections::HashMap;
+use rand::RngExt;
 
-use crate::{Card, CardGame, SessionConfig, Deck};
+use crate::game::{card::Card, card_game::CardGame, deck::Deck, room_config::RoomConfig};
 
 #[derive(Debug)]
-pub struct Session {
+pub struct Room {
     pub deck: Deck,
     pub stock_pile: Vec<Card>,
     pub discard_pile: Vec<Card>,
-    pub session_id: u32,
+    pub room_id: u64,
     pub games: HashMap<u32, CardGame>,
     pub players: Vec<SessionPlayer>,
-    pub config: SessionConfig,
-    pub session_host_index: usize,
+    pub config: RoomConfig,
+    pub host_id: u32,
     pub currently_playing: bool,
     pub current_turn: usize
 }
@@ -23,20 +24,22 @@ pub struct SessionPlayer {
     pub card_stack: Vec<Card>
 }
 
-impl Session {
-    pub fn new(session_id: u32, cfg: SessionConfig, host_id: u32) -> Result<Self, String> {
+impl Room {
+    pub fn new(cfg: RoomConfig, host_id: u32) -> Result<Self, String> {
         let new_session_player = SessionPlayer { player_id: host_id, current_score: 0, card_stack: Vec::new() };
         let deck = Deck::new(cfg.with_joker);
+
+        let random_number: u64 = rand::rng().random();
 
         return Ok(Self {
             deck: deck,
             stock_pile: Vec::new(),
             discard_pile: Vec::new(),
-            session_id: session_id,
+            room_id: random_number,
             games: HashMap::new(),
             players: vec![new_session_player],
             config: cfg,
-            session_host_index: 0,
+            host_id: host_id,
             currently_playing: false,
             current_turn: 0
         });
@@ -62,11 +65,11 @@ impl Session {
 
         // Start
         if self.currently_playing {
-            return Err(format!("[START GAME GAGAL] Sesi dengan ID {} saat ini sedang bermain", self.session_id));
+            return Err(format!("[START GAME GAGAL] Sesi dengan ID {} saat ini sedang bermain", self.room_id));
         }
 
         if self.players.len() < 3 {
-            return Err(format!("[START GAME GAGAL] Sesi dengan ID {} kekurangan setidaknya {} pemain", self.session_id, 3 - self.players.len()));
+            return Err(format!("[START GAME GAGAL] Sesi dengan ID {} kekurangan setidaknya {} pemain", self.room_id, 3 - self.players.len()));
         }
 
         println!("Game dimulai");
@@ -74,24 +77,16 @@ impl Session {
         self.share_cards();
 
         if self.games.len() == 0 {
-            let game = CardGame::new(self.config, self.players[self.session_host_index].player_id);
+            let game = CardGame::new(self.config.clone());
             
             self.games.insert(game_id, game);
         }
-
-
-        // End game
-        self.deck = Deck { cards: Vec::new() };
-        self.discard_pile = Vec::new();
-        self.stock_pile = Vec::new();
-        self.currently_playing = false;
-
-        println!("Game telah selesai");
+        
         return Ok(());
         
     }
 
-    pub fn put_player_in_session(&mut self, player_id: u32) -> Result<(), String> {
+    pub fn put_player_in_room(&mut self, player_id: u32) -> Result<(), String> {
         if self.players.len() > 4 {
             return Err(String::from("Dalam satu session hanya memuat maksimal 4 player [Put Player in Session gagal]"));
         }

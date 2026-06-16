@@ -1,6 +1,7 @@
-use crate::{Card, CardIcon, CardType, CourtType, JokerType, SpotNumber};
 use rand::seq::SliceRandom;
 use strum::IntoEnumIterator;
+
+use crate::game::card::{Card, CardIcon, CardType, CourtType, JokerType, SpotNumber};
 
 #[derive(Debug)]
 pub struct Deck {
