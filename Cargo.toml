@@ -11,4 +11,5 @@ serde = { version = "1.0.228", features = ["derive"] }
 strum = "0.28"
 strum_macros = "0.28"
 tokio = { version = "1.52.3", features = ["full"] }
+futures-util = { version = "0.3", default-features = false, features = ["sink"] }
 

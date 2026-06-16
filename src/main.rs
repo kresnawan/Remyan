@@ -1,5 +1,6 @@
-use std::sync::{Arc, Mutex};
 use remyan::{AppInstance, game::app::App, network};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() {

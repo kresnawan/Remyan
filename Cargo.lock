@@ -659,6 +659,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "axum-extra",
+ "futures-util",
  "rand 0.10.1",
  "serde",
  "strum",

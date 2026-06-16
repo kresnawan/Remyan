@@ -1,7 +1,10 @@
-use std::collections::HashMap;
 use rand::RngExt;
+use std::collections::HashMap;
 
-use crate::game::{card::Card, card_game::CardGame, deck::Deck, room_config::RoomConfig};
+use crate::{
+    Tx,
+    game::{card::Card, card_game::CardGame, deck::Deck, room_config::RoomConfig},
+};
 
 #[derive(Debug)]
 pub struct Room {
@@ -10,26 +13,33 @@ pub struct Room {
     pub discard_pile: Vec<Card>,
     pub room_id: u64,
     pub games: HashMap<u32, CardGame>,
-    pub players: Vec<SessionPlayer>,
+    pub players: HashMap<u32, RoomPlayer>,
+    pub player_turns: Vec<u32>,
     pub config: RoomConfig,
     pub host_id: u32,
     pub currently_playing: bool,
-    pub current_turn: usize
+    pub current_turn: usize,
 }
 
 #[derive(Debug)]
-pub struct SessionPlayer {
-    pub player_id: u32,
+pub struct RoomPlayer {
     pub current_score: i32,
-    pub card_stack: Vec<Card>
+    pub card_stack: Vec<Card>,
+    pub tx: Option<Tx>,
 }
 
 impl Room {
     pub fn new(cfg: RoomConfig, host_id: u32) -> Result<Self, String> {
-        let new_session_player = SessionPlayer { player_id: host_id, current_score: 0, card_stack: Vec::new() };
+        let new_session_player = RoomPlayer {
+            current_score: 0,
+            card_stack: Vec::new(),
+            tx: None,
+        };
         let deck = Deck::new(cfg.with_joker);
 
         let random_number: u64 = rand::rng().random();
+        let mut players = HashMap::new();
+        players.insert(host_id, new_session_player);
 
         return Ok(Self {
             deck: deck,
@@ -37,21 +47,22 @@ impl Room {
             discard_pile: Vec::new(),
             room_id: random_number,
             games: HashMap::new(),
-            players: vec![new_session_player],
+            players: players,
+            player_turns: Vec::new(),
             config: cfg,
             host_id: host_id,
             currently_playing: false,
-            current_turn: 0
+            current_turn: 0,
         });
     }
 
     fn share_cards(&mut self) {
         self.deck.shuffle();
         // Share cards
-        for i in &mut self.players {
+        for (&player_id, obj) in self.players.iter_mut() {
             for _ in 0..6 {
                 let card = self.deck.cards.pop().unwrap();
-                i.card_stack.push(card);
+                obj.card_stack.push(card);
             }
         }
 
@@ -60,16 +71,22 @@ impl Room {
             self.stock_pile.push(n);
         }
     }
-    
-    pub fn start_new_game(&mut self, game_id: u32) -> Result<(), String> {
 
+    pub fn start_new_game(&mut self, game_id: u32) -> Result<(), String> {
         // Start
         if self.currently_playing {
-            return Err(format!("[START GAME GAGAL] Sesi dengan ID {} saat ini sedang bermain", self.room_id));
+            return Err(format!(
+                "[START GAME GAGAL] Sesi dengan ID {} saat ini sedang bermain",
+                self.room_id
+            ));
         }
 
         if self.players.len() < 3 {
-            return Err(format!("[START GAME GAGAL] Sesi dengan ID {} kekurangan setidaknya {} pemain", self.room_id, 3 - self.players.len()));
+            return Err(format!(
+                "[START GAME GAGAL] Sesi dengan ID {} kekurangan setidaknya {} pemain",
+                self.room_id,
+                3 - self.players.len()
+            ));
         }
 
         println!("Game dimulai");
@@ -78,36 +95,45 @@ impl Room {
 
         if self.games.len() == 0 {
             let game = CardGame::new(self.config.clone());
-            
+
             self.games.insert(game_id, game);
         }
-        
+
         return Ok(());
-        
     }
 
     pub fn put_player_in_room(&mut self, player_id: u32) -> Result<(), String> {
-        if self.players.len() > 4 {
-            return Err(String::from("Dalam satu session hanya memuat maksimal 4 player [Put Player in Session gagal]"));
+        if self.players.len() >= 4 {
+            return Err(String::from(
+                "Dalam satu session hanya memuat maksimal 4 player [Put Player in Session gagal]",
+            ));
         }
-        let new_session_player = SessionPlayer {player_id: player_id, current_score: 0, card_stack: Vec::new()};
-        self.players.push(new_session_player);
+        let new_session_player = RoomPlayer {
+            current_score: 0,
+            card_stack: Vec::new(),
+            tx: None,
+        };
+        self.players.insert(player_id, new_session_player);
+        self.player_turns.push(player_id);
 
         Ok(())
     }
 
-    fn get_session_player_mut(&mut self, player_id: u32) -> Option<&mut SessionPlayer> {
-        self.players.iter_mut().find(|e| e.player_id == player_id)
+    fn get_room_player_mut(&mut self, player_id: u32) -> Option<&mut RoomPlayer> {
+        self.players.get_mut(&player_id)
     }
 
-    fn get_session_player(&self, player_id: u32) -> Option<&SessionPlayer> {
-        self.players.iter().find(|e| e.player_id == player_id)
+    fn get_room_player(&self, player_id: u32) -> Option<&RoomPlayer> {
+        self.players.get(&player_id)
     }
 
     fn handle_draw_player_card(&mut self, player_id: u32, draw_source: u8) {
         if draw_source == 0 {
             let card = self.stock_pile.pop().unwrap();
-            self.get_session_player_mut(player_id).unwrap().card_stack.push(card);
+            self.get_room_player_mut(player_id)
+                .unwrap()
+                .card_stack
+                .push(card);
         } else if draw_source == 1 {
             let mut current_discard_stack = self.discard_pile.iter().rev();
             for i in 0..self.players.len() {
@@ -126,10 +152,9 @@ impl Room {
     }
 
     pub fn handle_turn(&mut self, player_id: u32) -> Result<(), String> {
-        if let Some(n) = self.get_session_player(player_id) {
-            if self.players[self.current_turn].player_id == player_id {
+        if let Some(_) = self.get_room_player(player_id) {
+            if self.player_turns[self.current_turn] == player_id {
                 // Handle player's turn
-
                 self.stock_pile.pop().unwrap();
 
                 self.next_turn();
@@ -138,7 +163,7 @@ impl Room {
                 return Err(format!("[TURN GAGAL] PlayerId belum saatnya bermain"));
             }
         } else {
-            return Err(format!("[TURN GAGAL] Player tidak ditemukan di session"));
+            return Err(format!("[TURN GAGAL] Player tidak ditemukan di room"));
         }
     }
 }
