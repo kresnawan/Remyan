@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-rand = "0.10.0"
+axum = { version = "0.8.9", features = ["json", "macros", "ws"] }
+axum-extra = { version = "0.12.6", features = ["cookie"] }
+rand = "0.10.1"
+serde = { version = "1.0.228", features = ["derive"] }
 strum = "0.28"
 strum_macros = "0.28"
+tokio = { version = "1.52.3", features = ["full"] }
+
