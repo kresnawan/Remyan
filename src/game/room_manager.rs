@@ -42,20 +42,9 @@ impl RoomManager {
         self.room_players.contains_key(&player_id)
     }
 
-    pub fn handle_room_game_start(&mut self, room_id: u64, game_id: u32) -> Result<(), String> {
-        let session = self.rooms.get_mut(&room_id).unwrap();
-        match session.start_game(game_id) {
-            Ok(_) => {
-                println!("[GAME DIMULAI] SessionId: {}, GameId: {}", room_id, game_id);
-                return Ok(());
-            }
-            Err(err) => return Err(err),
-        }
-    }
-
     pub fn put_player_in_room(&mut self, player_id: u32, room_id: u64) -> Result<(), String> {
         if self.check_if_player_in_a_room(player_id) {
-            return Err(format!("Pemain {player_id} sudah masuk di session"));
+            return Err(format!("Pemain {player_id} sudah masuk ke room"));
         }
 
         self.room_players.insert(player_id, room_id);
@@ -63,6 +52,7 @@ impl RoomManager {
         let room = match self.rooms.get_mut(&room_id) {
             Some(r) => r,
             None => {
+                self.room_players.remove(&player_id);
                 return Err(String::from("Room tidak ditemukan"));
             }
         };
@@ -74,5 +64,9 @@ impl RoomManager {
 
         println!("Pemain {player_id} masuk room: {room_id}");
         return Ok(());
+    }
+
+    pub fn get_room(&self, room_id: u64) -> Option<&Room> {
+        self.rooms.get(&room_id)
     }
 }

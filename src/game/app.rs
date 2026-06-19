@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::game::player::{Player, PlayerStatus};
+use crate::game::room::Room;
 use crate::game::room_config::RoomConfig;
 use crate::game::room_manager::RoomManager;
 
@@ -101,5 +102,9 @@ impl App {
         // }
 
         self.room_manager.insert_room(host_id, cfg)
+    }
+
+    pub fn get_room(&self, room_id: u64) -> Option<&Room> {
+        self.room_manager.get_room(room_id)
     }
 }

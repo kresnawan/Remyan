@@ -1,20 +1,20 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use strum_macros::EnumIter;
 
-#[derive(Debug, EnumIter, Clone, Copy, Deserialize)]
+#[derive(Debug, EnumIter, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub enum CourtType {
     Jack,
     Queen,
     King,
 }
 
-#[derive(Debug, EnumIter, Clone, Copy, Deserialize)]
+#[derive(Debug, EnumIter, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub enum JokerType {
     Red,
     Black,
 }
 
-#[derive(Debug, EnumIter, Clone, Copy, Deserialize)]
+#[derive(Debug, EnumIter, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub enum CardIcon {
     Heart,
     Diamond,
@@ -22,7 +22,7 @@ pub enum CardIcon {
     Club,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub enum CardType {
     Ace,
     Court(CourtType),
@@ -30,7 +30,7 @@ pub enum CardType {
     Joker(JokerType),
 }
 
-#[derive(Debug, EnumIter, Clone, Copy, Deserialize)]
+#[derive(Debug, EnumIter, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub enum SpotNumber {
     Two,
     Three,
@@ -43,7 +43,7 @@ pub enum SpotNumber {
     Ten,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub struct Card {
     pub card_icon: Option<CardIcon>,
     pub card_type: CardType,

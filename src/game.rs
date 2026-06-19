@@ -6,3 +6,4 @@ pub mod player;
 pub mod room;
 pub mod room_config;
 pub mod room_manager;
+pub mod room_player;

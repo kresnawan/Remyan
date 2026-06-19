@@ -1,9 +1,8 @@
-use std::{collections::HashMap, sync::Arc};
-
+use crate::game::{app::App, card::Card, room_config::RoomConfig};
 use axum::extract::ws::Message;
-use tokio::sync::{Mutex, RwLock, mpsc};
-
-use crate::game::app::App;
+use serde::Deserialize;
+use std::sync::Arc;
+use tokio::sync::{Mutex, mpsc};
 
 pub mod game;
 pub mod network;
@@ -11,4 +10,5 @@ pub mod network;
 pub type AppInstance = Arc<Mutex<App>>;
 
 type Tx = mpsc::UnboundedSender<Message>;
-type Connections = Arc<RwLock<HashMap<u32, Tx>>>;
+
+
