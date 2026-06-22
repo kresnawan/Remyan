@@ -1,8 +1,6 @@
 use axum::extract::ws::{Message, Utf8Bytes};
 use rand::RngExt;
-use std::{
-    collections::{HashMap, HashSet}
-};
+use std::collections::{HashMap, HashSet};
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -10,9 +8,17 @@ use crate::{
         card::{Card, CardType, CourtType, SpotNumber},
         card_game::CardGame,
         deck::Deck,
-        room_config::RoomConfig, room_player::RoomPlayer,
+        player_turn::PlayerTurn,
+        room_config::RoomConfig,
+        room_player::RoomPlayer,
     },
-    network::ws::token::event::{Error::{self, PlayerNotEnough, RoomIsCurrentlyPlaying}, EventToken, ServerEvent},
+    network::ws::token::{
+        command::{CommandTurn, DrawSource, GameCommand},
+        event::{
+            Error::{self, PlayerNotEnough, RoomIsCurrentlyPlaying},
+            EventToken, EventTurn, GameEvent, ServerEvent,
+        },
+    },
 };
 
 #[derive(Debug)]
@@ -27,7 +33,7 @@ pub struct Room {
     pub config: RoomConfig,
     pub host_id: u32,
     pub currently_playing: bool,
-    pub current_turn: usize,
+    pub current_turn: PlayerTurn,
 }
 
 impl Room {
@@ -50,7 +56,7 @@ impl Room {
             config: cfg,
             host_id: host_id,
             currently_playing: false,
-            current_turn: 0,
+            current_turn: PlayerTurn::new(),
         });
     }
 
@@ -70,8 +76,11 @@ impl Room {
         }
     }
 
-    pub fn start_game(&mut self, game_id: u32) -> Result<(), Error> {
-        // Start
+    pub fn start_game(&mut self, game_id: u32, player_id: u32) -> Result<(), Error> {
+        if self.host_id != player_id {
+            return Err(Error::NotAHost);
+        }
+
         if self.currently_playing {
             return Err(RoomIsCurrentlyPlaying);
         }
@@ -110,28 +119,18 @@ impl Room {
         self.players.get(&player_id)
     }
 
-    fn next_turn(&mut self) {
-        if self.current_turn == self.players.len() - 1 {
-            self.current_turn = 0;
-        } else {
-            self.current_turn += 1;
-        }
-    }
-
-    pub fn handle_turn(&mut self, player_id: u32) -> Result<(), String> {
-        if let Some(_) = self.get_room_player(player_id) {
-            if self.player_turns[self.current_turn] == player_id {
-                // Handle player's turn
-                self.stock_pile.pop().unwrap();
-
-                self.next_turn();
-                return Ok(());
+    pub fn try_next_turn(&mut self) -> bool {
+        if self.current_turn.is_complete() {
+            if self.current_turn.index == self.players.len() - 1 {
+                self.current_turn.index = 0;
             } else {
-                return Err(format!("[TURN GAGAL] PlayerId belum saatnya bermain"));
+                self.current_turn.index += 1;
             }
-        } else {
-            return Err(format!("[TURN GAGAL] Player tidak ditemukan di room"));
+
+            return true;
         }
+
+        return false;
     }
 
     pub fn broadcast(&self, token: EventToken, player_id: u32, all: bool) -> Result<(), String> {
@@ -199,17 +198,6 @@ impl Room {
         ))
     }
 
-    pub fn handle_draw_from_discard_pile(&mut self, number: usize, player_id: u32) {
-        let mut pile = self.discard_pile.iter().peekable();
-        let mut candidate: Vec<&Card> = Vec::new();
-
-        for i in 0..number {
-            if let Some(&card) = pile.peek() {
-                candidate.push(card);
-            }
-        }
-    }
-
     pub fn check_card_eligibility(
         card: &Card,
         player_card_hashset: &HashSet<&Card>,
@@ -234,10 +222,19 @@ impl Room {
 
                 let s_number_unw = s_number.unwrap();
 
+                let mut three_smaller = false;
                 let mut two_smaller = false;
                 let mut one_smaller = false;
                 let mut one_greater = false;
                 let mut two_greater = false;
+                let mut three_greater = false;
+
+                if s_number_unw >= 3 {
+                    three_smaller = player_card_hashset.contains(&Card {
+                        card_icon: card.card_icon,
+                        card_type: CardType::Spot(*arr.get(s_number_unw - 3).unwrap()),
+                    });
+                }
 
                 if s_number_unw >= 2 {
                     two_smaller = player_card_hashset.contains(&Card {
@@ -263,10 +260,20 @@ impl Room {
                         card_type: CardType::Spot(*arr.get(s_number_unw + 2).unwrap()),
                     });
                 }
+                if s_number_unw <= 5 {
+                    three_greater = player_card_hashset.contains(&Card {
+                        card_icon: card.card_icon,
+                        card_type: CardType::Spot(*arr.get(s_number_unw + 3).unwrap()),
+                    });
+                }
 
                 if (two_smaller && one_smaller)
                     || (one_smaller && one_greater)
                     || (one_greater && two_greater)
+                    || (three_smaller && two_smaller && one_smaller)
+                    || (two_smaller && one_smaller && one_greater)
+                    || (one_smaller && one_greater && two_greater)
+                    || (one_greater && two_greater && three_greater)
                 {
                     return true;
                 }
@@ -345,5 +352,209 @@ impl Room {
         }
 
         false
+    }
+}
+
+/**
+ *
+ * The separate implementation below is for player's turn handler
+ * Separated due to complexity
+ *
+ *
+ *
+ */
+
+impl Room {
+    pub fn handle_turn(
+        &mut self,
+        command_type: GameCommand,
+        player_id: u32,
+    ) -> Result<GameEvent, Error> {
+        let result;
+        match command_type {
+            GameCommand::Turn(turn) => {
+                if self.player_turns[self.current_turn.index] != player_id {
+                    return Err(Error::NotATurn);
+                }
+
+                match turn {
+                    CommandTurn::Discard(card) => {
+                        if let Some(_) = self.current_turn.discarded_card {
+                            return Err(Error::RepeatTurn);
+                        }
+                        result = self.handle_discard(player_id, card);
+                    }
+                    CommandTurn::Draw(draw) => {
+                        if let Some(_) = self.current_turn.drawn_card {
+                            return Err(Error::RepeatTurn);
+                        }
+
+                        match draw {
+                            DrawSource::DiscardPile(number) => {
+                                result = self
+                                    .handle_draw_from_discard_pile(usize::from(number), player_id);
+                            }
+                            DrawSource::StockPile => {
+                                result = self.handle_draw_from_stock_pile(player_id);
+                            }
+                        }
+
+                        if let Ok(_) = result {
+                            self.current_turn.draw_source = Some(draw);
+                        }
+                    }
+                }
+            }
+            GameCommand::Make { cards } => {
+                result = self.handle_meld(player_id, cards);
+            }
+            GameCommand::Put { cards } => {
+                result = self.handle_put(player_id, cards);
+            }
+        }
+
+        return result;
+    }
+
+    pub fn handle_draw_from_discard_pile(
+        &mut self,
+        number: usize,
+        player_id: u32,
+    ) -> Result<GameEvent, Error> {
+        let mut pile = self.discard_pile.iter().rev().peekable();
+
+        let player = self.get_room_player(player_id).unwrap();
+        let player_card: HashSet<&Card> = player.hand_cards.iter().collect();
+
+        if number > self.players.len() - 1 {
+            return Err(Error::TooManyDraw);
+        }
+
+        for _ in 0..number {
+            let card_from_pile = pile.peek().unwrap();
+            let is_eligible = Room::check_card_eligibility(
+                *card_from_pile,
+                &player_card,
+                !player.melded_cards.is_empty(),
+            );
+            if !is_eligible {
+                return Err(Error::Ineligible);
+            }
+
+            pile.next();
+        }
+
+        let player = self.players.get_mut(&player_id).unwrap();
+        self.current_turn.drawn_card = Some(Vec::new());
+
+        let current_turn_drawn_cards = self.current_turn.drawn_card.as_mut().unwrap();
+
+        for _ in 0..number {
+            if let Some(n) = self.discard_pile.pop() {
+                current_turn_drawn_cards.push(n.clone());
+                player.hand_cards.push(n);
+            }
+        }
+
+        let drawn_cards = self.current_turn.drawn_card.as_ref().unwrap();
+        let copied = drawn_cards.clone();
+
+        self.ws_send_player(
+            EventToken::GameEvent(GameEvent::DrawnCard { cards: copied }),
+            player_id,
+        )
+        .unwrap();
+
+        Ok(GameEvent::Turn(EventTurn::Draw {
+            player_id,
+            source: DrawSource::DiscardPile(number as u8),
+        }))
+    }
+
+    pub fn handle_draw_from_stock_pile(&mut self, player_id: u32) -> Result<GameEvent, Error> {
+        let drawn_card = self.stock_pile.pop();
+        let player = self.players.get_mut(&player_id).unwrap();
+
+        if let Some(card) = drawn_card {
+            self.current_turn.drawn_card = Some(vec![card]);
+            player.hand_cards.push(card);
+            self.ws_send_player(
+                EventToken::GameEvent(GameEvent::DrawnCard { cards: vec![card] }),
+                player_id,
+            )
+            .unwrap();
+            return Ok(GameEvent::Turn(EventTurn::Draw {
+                player_id,
+                source: DrawSource::StockPile,
+            }));
+        }
+
+        Err(Error::CardNotFound)
+    }
+
+    pub fn handle_discard(&mut self, player_id: u32, card: Card) -> Result<GameEvent, Error> {
+        let player = self.players.get_mut(&player_id).unwrap();
+
+        if card.card_type == CardType::Ace && player.melded_cards.is_empty() {
+            return Err(Error::RequireMeld);
+        }
+
+        let card_index = player
+            .hand_cards
+            .iter()
+            .position(|card_item| card_item == &card);
+
+        if let Some(index) = card_index {
+            let discarded = player.hand_cards.remove(index);
+            self.current_turn.discarded_card = Some(discarded.clone());
+            self.discard_pile.push(discarded);
+
+            return Ok(GameEvent::Turn(EventTurn::Discard { player_id, card }));
+        }
+
+        Err(Error::CardNotFound)
+    }
+
+    pub fn handle_meld(&mut self, player_id: u32, cards: Vec<Card>) -> Result<GameEvent, Error> {
+        let player = self.players.get(&player_id).unwrap();
+        let player_hand_cards_hs: HashSet<&Card> = player.hand_cards.iter().collect();
+
+        for i in &cards {
+            if !player_hand_cards_hs.contains(i) {
+                return Err(Error::CardNotFound);
+            }
+        }
+
+        let pivot = cards.get(0).unwrap();
+        let cards_hs: HashSet<&Card> = cards.iter().collect();
+
+        let res = Room::check_card_eligibility(pivot, &cards_hs, !player.melded_cards.is_empty());
+
+        if res {
+            return Ok(GameEvent::Make { player_id, cards });
+        }
+
+        return Err(Error::Ineligible);
+    }
+
+    pub fn handle_put(&mut self, player_id: u32, cards: Vec<Card>) -> Result<GameEvent, Error> {
+        let player = self.players.get_mut(&player_id).unwrap();
+
+        let mut temp_hand_cards = player.hand_cards.clone();
+        let mut cards_to_put: Vec<Card> = Vec::new();
+
+        for i in &cards {
+            if let Some(index) = temp_hand_cards.iter().position(|item| item == i) {
+                let removed_card = temp_hand_cards.remove(index);
+                cards_to_put.push(removed_card);
+            } else {
+                return Err(Error::CardNotFound);
+            }
+        }
+
+        player.hand_cards = temp_hand_cards;
+        player.putted_cards.extend(cards_to_put);
+
+        return Ok(GameEvent::Put { player_id, cards });
     }
 }

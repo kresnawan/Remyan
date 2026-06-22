@@ -5,10 +5,11 @@ use crate::{
     network::ws::{
         command_parser::parse_command,
         token::{
-            command::{CommandToken, CommandTurn, DrawSource, GameCommand, RoomCommand},
+            command::{CommandToken, RoomCommand},
             event::{
+                Error,
                 EventToken::{self},
-                EventTurn, GameEvent,
+                GameEvent,
                 RoomEvent::{self},
                 ServerEvent::{self},
             },
@@ -33,7 +34,7 @@ pub async fn handle_room_command(
                 let mut instance = app.lock().await;
                 let room = instance.room_manager.rooms.get_mut(&room_id).unwrap();
 
-                match room.start_game(1) {
+                match room.start_game(1, player_id) {
                     Ok(_) => {
                         room.broadcast(
                             EventToken::RoomEvent(RoomEvent::StartGame),
@@ -43,7 +44,7 @@ pub async fn handle_room_command(
                         .unwrap();
                         room.broadcast(
                             EventToken::GameEvent(GameEvent::CurrentTurn(
-                                room.player_turns[room.current_turn],
+                                room.player_turns[room.current_turn.index],
                             )),
                             player_id,
                             true,
@@ -88,91 +89,38 @@ pub async fn handle_game_command(
     player_id: u32,
     room_id: u64,
     app: AppInstance,
-) -> Result<(), ()> {
+) -> Result<(), Error> {
     let command = match parse_command(command) {
         Ok(res) => res,
-        Err(_) => return Err(()),
+        Err(_) => return Err(Error::InvalidCommand),
     };
 
     if let CommandToken::GameCommand(token) = command {
-        match token {
-            GameCommand::Turn(turn) => match turn {
-                CommandTurn::Draw(src) => match src {
-                    DrawSource::DiscardPile(count) => {
-                        let mut instance = app.lock().await;
-                        let room = instance.room_manager.rooms.get_mut(&room_id).unwrap();
+        let mut instance = app.lock().await;
+        let room = instance.room_manager.rooms.get_mut(&room_id).unwrap();
 
-                        if usize::from(count) > room.players.len() - 1 {
-                            return Err(());
-                        }
+        match room.handle_turn(token, player_id) {
+            Ok(event) => {
+                room.broadcast(EventToken::GameEvent(event), player_id, false)
+                    .unwrap();
+            }
+            Err(err) => {
+                room.ws_send_player(EventToken::ServerEvent(ServerEvent::Error(err)), player_id)
+                    .unwrap();
+            }
+        };
 
-                        if room.discard_pile.len() < usize::from(count) {
-                            return Err(());
-                        }
-
-                        let player = room.players.get_mut(&player_id).unwrap();
-
-                        for _ in 0..count {
-                            if let Some(n) = room.discard_pile.pop() {
-                                player.hand_cards.push(n);
-                            }
-                        }
-
-                        room.broadcast(
-                            EventToken::GameEvent(GameEvent::Turn(EventTurn::Draw {
-                                player_id,
-                                source: DrawSource::DiscardPile(count),
-                            })),
-                            player_id,
-                            false,
-                        )
-                        .unwrap();
-                    }
-                    DrawSource::StockPile => {
-                        let mut instance = app.lock().await;
-                        let room = instance.room_manager.rooms.get_mut(&room_id).unwrap();
-                        let player = room.players.get_mut(&player_id).unwrap();
-
-                        if let Some(card) = room.stock_pile.pop() {
-                            player.hand_cards.push(card);
-                        }
-
-                        room.broadcast(
-                            EventToken::GameEvent(GameEvent::Turn(EventTurn::Draw {
-                                player_id,
-                                source: DrawSource::StockPile,
-                            })),
-                            player_id,
-                            false,
-                        )
-                        .unwrap();
-                    }
-                },
-                CommandTurn::Discard(card) => {
-                    let mut instance = app.lock().await;
-                    let room = instance.room_manager.rooms.get_mut(&room_id).unwrap();
-                    let player = room.players.get_mut(&player_id).unwrap();
-
-                    let card_index = player.hand_cards.iter().position(|ca| ca == &card);
-                    if let Some(index) = card_index {
-                        let discarded_card = player.hand_cards.remove(index);
-                        room.discard_pile.push(discarded_card);
-
-                        room.broadcast(
-                            EventToken::GameEvent(GameEvent::Turn(EventTurn::Discard {
-                                player_id: player_id,
-                                card: discarded_card,
-                            })),
-                            player_id,
-                            false,
-                        )
-                        .unwrap();
-                    }
-                }
-            },
-            GameCommand::Make { cards } => {}
-            GameCommand::Put { cards } => {}
-        }
+        if true == room.try_next_turn() {
+            room.current_turn.reset();
+            room.broadcast(
+                EventToken::GameEvent(GameEvent::CurrentTurn(
+                    room.player_turns[room.current_turn.index],
+                )),
+                player_id,
+                true,
+            )
+            .unwrap();
+        };
     }
 
     Ok(())
