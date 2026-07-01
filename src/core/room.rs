@@ -1,25 +1,18 @@
-use axum::extract::ws::{Message, Utf8Bytes};
 use rand::RngExt;
 use std::collections::{HashMap, HashSet};
 use strum::IntoEnumIterator;
 
-use crate::{
-    game::{
-        card::{Card, CardType, CourtType, SpotNumber},
-        card_game::CardGame,
-        deck::Deck,
-        player_turn::PlayerTurn,
-        room_config::RoomConfig,
-        room_player::RoomPlayer,
-    },
-    network::ws::token::{
-        command::{CommandTurn, DrawSource, GameCommand},
-        event::{
-            Error::{self, PlayerNotEnough, RoomIsCurrentlyPlaying},
-            EventToken, EventTurn, GameEvent, ServerEvent,
-        },
-    },
-};
+use crate::core::{
+        card::{Card, CardType, CourtType, SpotNumber}, card_game::CardGame, deck::Deck, player_turn::PlayerTurn, protocol::Error
+    };
+
+mod config;
+mod manager;
+mod player;
+
+pub use config::*;
+pub use manager::*;
+pub use player::*;
 
 #[derive(Debug)]
 pub struct Room {
@@ -82,11 +75,11 @@ impl Room {
         }
 
         if self.currently_playing {
-            return Err(RoomIsCurrentlyPlaying);
+            return Err(Error::RoomIsCurrentlyPlaying);
         }
 
         if self.players.len() < 3 {
-            return Err(PlayerNotEnough);
+            return Err(Error::PlayerNotEnough);
         }
 
         println!("Game dimulai");
@@ -131,71 +124,6 @@ impl Room {
         }
 
         return false;
-    }
-
-    pub fn broadcast(&self, token: EventToken, player_id: u32, all: bool) -> Result<(), String> {
-        let serialized = serde_json::to_string(&token).unwrap();
-        let payload = Utf8Bytes::from(serialized);
-        for (&pid, pd) in self.players.iter() {
-            if all || pid != player_id {
-                let ptx = match pd.tx.as_ref() {
-                    Some(tx) => tx,
-                    None => {
-                        println!("broadcast: terjadi error pada tx.as_ref()");
-                        continue;
-                    }
-                };
-
-                if let Err(_) = ptx.send(Message::Text(payload.clone())) {
-                    println!("broadcast: terjadi error saat mengirim ke pesan websocket ke client");
-                    continue;
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn broadcast_card(&self) -> Result<(), String> {
-        for (_, pd) in self.players.iter() {
-            let ptx = match pd.tx.as_ref() {
-                Some(tx) => tx,
-                None => {
-                    println!("broadcast_card: terjadi error pada tx.as_ref()");
-                    continue;
-                }
-            };
-
-            let token = EventToken::ServerEvent(ServerEvent::PlayerCard(pd.hand_cards.clone()));
-            let serialized = serde_json::to_string(&token).unwrap();
-            let payload = Utf8Bytes::from(serialized);
-
-            if let Err(_) = ptx.send(Message::Text(payload.clone())) {
-                println!(
-                    "broadcast_card: terjadi error saat mengirim ke pesan websocket ke client"
-                );
-                continue;
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn ws_send_player(&self, token: EventToken, player_id: u32) -> Result<(), String> {
-        let player = self.players.get(&player_id).unwrap();
-        let serialized = serde_json::to_string(&token).unwrap();
-        let payload = Utf8Bytes::from(serialized);
-
-        if let Some(ptx) = player.tx.as_ref() {
-            match ptx.send(Message::Text(payload.clone())) {
-                Ok(_) => return Ok(()),
-                Err(e) => return Err(e.to_string()),
-            }
-        }
-
-        Err(String::from(
-            "ws_send_player: terjadi error pada tx.as_ref()",
-        ))
     }
 
     pub fn check_card_eligibility(
@@ -365,62 +293,11 @@ impl Room {
  */
 
 impl Room {
-    pub fn handle_turn(
-        &mut self,
-        command_type: GameCommand,
-        player_id: u32,
-    ) -> Result<GameEvent, Error> {
-        let result;
-        match command_type {
-            GameCommand::Turn(turn) => {
-                if self.player_turns[self.current_turn.index] != player_id {
-                    return Err(Error::NotATurn);
-                }
-
-                match turn {
-                    CommandTurn::Discard(card) => {
-                        if let Some(_) = self.current_turn.discarded_card {
-                            return Err(Error::RepeatTurn);
-                        }
-                        result = self.handle_discard(player_id, card);
-                    }
-                    CommandTurn::Draw(draw) => {
-                        if let Some(_) = self.current_turn.drawn_card {
-                            return Err(Error::RepeatTurn);
-                        }
-
-                        match draw {
-                            DrawSource::DiscardPile(number) => {
-                                result = self
-                                    .handle_draw_from_discard_pile(usize::from(number), player_id);
-                            }
-                            DrawSource::StockPile => {
-                                result = self.handle_draw_from_stock_pile(player_id);
-                            }
-                        }
-
-                        if let Ok(_) = result {
-                            self.current_turn.draw_source = Some(draw);
-                        }
-                    }
-                }
-            }
-            GameCommand::Make { cards } => {
-                result = self.handle_meld(player_id, cards);
-            }
-            GameCommand::Put { cards } => {
-                result = self.handle_put(player_id, cards);
-            }
-        }
-
-        return result;
-    }
-
-    pub fn handle_draw_from_discard_pile(
+    pub async fn handle_draw_from_discard_pile(
         &mut self,
         number: usize,
         player_id: u32,
-    ) -> Result<GameEvent, Error> {
+    ) -> Result<Vec<Card>, Error> {
         let mut pile = self.discard_pile.iter().rev().peekable();
 
         let player = self.get_room_player(player_id).unwrap();
@@ -459,40 +336,23 @@ impl Room {
         let drawn_cards = self.current_turn.drawn_card.as_ref().unwrap();
         let copied = drawn_cards.clone();
 
-        self.ws_send_player(
-            EventToken::GameEvent(GameEvent::DrawnCard { cards: copied }),
-            player_id,
-        )
-        .unwrap();
-
-        Ok(GameEvent::Turn(EventTurn::Draw {
-            player_id,
-            source: DrawSource::DiscardPile(number as u8),
-        }))
+        Ok(copied)
     }
 
-    pub fn handle_draw_from_stock_pile(&mut self, player_id: u32) -> Result<GameEvent, Error> {
+    pub async fn handle_draw_from_stock_pile(&mut self, player_id: u32) -> Result<Card, Error> {
         let drawn_card = self.stock_pile.pop();
         let player = self.players.get_mut(&player_id).unwrap();
 
         if let Some(card) = drawn_card {
             self.current_turn.drawn_card = Some(vec![card]);
             player.hand_cards.push(card);
-            self.ws_send_player(
-                EventToken::GameEvent(GameEvent::DrawnCard { cards: vec![card] }),
-                player_id,
-            )
-            .unwrap();
-            return Ok(GameEvent::Turn(EventTurn::Draw {
-                player_id,
-                source: DrawSource::StockPile,
-            }));
+            return Ok(card);
         }
 
         Err(Error::CardNotFound)
     }
 
-    pub fn handle_discard(&mut self, player_id: u32, card: Card) -> Result<GameEvent, Error> {
+    pub fn handle_discard(&mut self, player_id: u32, card: Card) -> Result<Card, Error> {
         let player = self.players.get_mut(&player_id).unwrap();
 
         if card.card_type == CardType::Ace && player.melded_cards.is_empty() {
@@ -509,13 +369,13 @@ impl Room {
             self.current_turn.discarded_card = Some(discarded.clone());
             self.discard_pile.push(discarded);
 
-            return Ok(GameEvent::Turn(EventTurn::Discard { player_id, card }));
+            return Ok(card);
         }
 
         Err(Error::CardNotFound)
     }
 
-    pub fn handle_meld(&mut self, player_id: u32, cards: Vec<Card>) -> Result<GameEvent, Error> {
+    pub fn handle_meld(&mut self, player_id: u32, cards: Vec<Card>) -> Result<Vec<Card>, Error> {
         let player = self.players.get(&player_id).unwrap();
         let player_hand_cards_hs: HashSet<&Card> = player.hand_cards.iter().collect();
 
@@ -531,13 +391,13 @@ impl Room {
         let res = Room::check_card_eligibility(pivot, &cards_hs, !player.melded_cards.is_empty());
 
         if res {
-            return Ok(GameEvent::Make { player_id, cards });
+            return Ok(cards);
         }
 
         return Err(Error::Ineligible);
     }
 
-    pub fn handle_put(&mut self, player_id: u32, cards: Vec<Card>) -> Result<GameEvent, Error> {
+    pub fn handle_put(&mut self, player_id: u32, cards: Vec<Card>) -> Result<Vec<Card>, Error> {
         let player = self.players.get_mut(&player_id).unwrap();
 
         let mut temp_hand_cards = player.hand_cards.clone();
@@ -553,8 +413,8 @@ impl Room {
         }
 
         player.hand_cards = temp_hand_cards;
-        player.putted_cards.extend(cards_to_put);
+        player.putted_cards.extend(cards_to_put.clone());
 
-        return Ok(GameEvent::Put { player_id, cards });
+        return Ok(cards_to_put);
     }
 }

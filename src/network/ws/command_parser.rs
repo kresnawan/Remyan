@@ -26,9 +26,9 @@
         }
     }
 */
-
-use crate::network::ws::token::command::CommandToken;
 use axum::extract::ws::Utf8Bytes;
+
+use crate::core::protocol::CommandToken;
 
 pub fn parse_command(txt: Utf8Bytes) -> Result<CommandToken, serde_json::Error> {
     serde_json::from_slice::<CommandToken>(txt.as_bytes())

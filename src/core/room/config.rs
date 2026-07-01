@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::game::card::{Card, CardType};
+use crate::core::card::{Card, CardType};
 
 #[derive(Debug, Clone, Deserialize)]
 pub enum NumberOfJokers {

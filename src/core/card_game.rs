@@ -1,4 +1,4 @@
-use crate::game::room_config::RoomConfig;
+use crate::core::room::RoomConfig;
 
 #[derive(Debug)]
 pub struct CardGame {

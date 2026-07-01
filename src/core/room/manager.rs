@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::game::{room::Room, room_config::RoomConfig};
+use crate::core::room::{Room, RoomConfig};
 
 #[derive(Debug)]
 pub struct RoomManager {

@@ -1,9 +1,11 @@
-use crate::game::app::App;
+
 use axum::extract::ws::Message;
 use std::sync::Arc;
 use tokio::sync::{Mutex, mpsc};
 
-pub mod game;
+use crate::core::app::App;
+
+pub mod core;
 pub mod network;
 
 pub type AppInstance = Arc<Mutex<App>>;

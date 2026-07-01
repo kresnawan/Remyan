@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use crate::game::player::{Player, PlayerStatus};
-use crate::game::room::Room;
-use crate::game::room_config::RoomConfig;
-use crate::game::room_manager::RoomManager;
+use crate::core::{player::{Player, PlayerStatus}, room::{Room, RoomConfig, RoomManager}};
 
 pub struct App {
     pub room_manager: RoomManager,

@@ -1,19 +1,18 @@
 use axum::extract::ws::Utf8Bytes;
+use tokio::sync::MutexGuard;
 
 use crate::{
     AppInstance,
+    core::{
+        app::App,
+        protocol::{
+            CommandToken, CommandTurn, DrawSource, Error, EventToken, EventTurn, GameCommand,
+            GameEvent, RoomCommand, RoomEvent, ServerEvent,
+        },
+    },
     network::ws::{
         command_parser::parse_command,
-        token::{
-            command::{CommandToken, RoomCommand},
-            event::{
-                Error,
-                EventToken::{self},
-                GameEvent,
-                RoomEvent::{self},
-                ServerEvent::{self},
-            },
-        },
+        event_broadcaster::{broadcast, broadcast_card, ws_send_player},
     },
 };
 
@@ -36,39 +35,45 @@ pub async fn handle_room_command(
 
                 match room.start_game(1, player_id) {
                     Ok(_) => {
-                        room.broadcast(
+                        broadcast(
+                            room,
                             EventToken::RoomEvent(RoomEvent::StartGame),
                             player_id,
                             true,
                         )
-                        .unwrap();
-                        room.broadcast(
+                        .await;
+                        broadcast(
+                            room,
                             EventToken::GameEvent(GameEvent::CurrentTurn(
                                 room.player_turns[room.current_turn.index],
                             )),
                             player_id,
                             true,
                         )
-                        .unwrap();
-                        room.broadcast_card().unwrap();
+                        .await;
+                        broadcast_card(room).await;
+                        println!("{:#?}", room.discard_pile);
+                        println!("{:#?}", room.stock_pile);
                         return Ok(());
                     }
                     Err(err) => {
-                        room.ws_send_player(
+                        ws_send_player(
+                            room,
                             EventToken::ServerEvent(ServerEvent::Error(err)),
                             player_id,
                         )
-                        .unwrap();
+                        .await;
                         return Err(());
                     }
                 }
             }
             RoomCommand::EditConfig { new_config } => {}
             RoomCommand::SendMessage { message } => {
-                let instance = app.lock().await;
+                let instance: MutexGuard<App> = app.lock().await;
                 let room = instance.get_room(room_id).unwrap();
 
-                room.broadcast(
+                broadcast(
+                    room,
                     EventToken::RoomEvent(RoomEvent::Message {
                         message: message,
                         sender_id: player_id,
@@ -76,7 +81,7 @@ pub async fn handle_room_command(
                     player_id,
                     false,
                 )
-                .unwrap();
+                .await;
             }
         }
     }
@@ -89,39 +94,116 @@ pub async fn handle_game_command(
     player_id: u32,
     room_id: u64,
     app: AppInstance,
-) -> Result<(), Error> {
-    let command = match parse_command(command) {
-        Ok(res) => res,
-        Err(_) => return Err(Error::InvalidCommand),
-    };
+) -> Result<GameEvent, Error> {
+    let command = parse_command(command);
+    let result: Result<GameEvent, Error>;
 
-    if let CommandToken::GameCommand(token) = command {
+    if let Ok(CommandToken::GameCommand(token)) = command {
         let mut instance = app.lock().await;
         let room = instance.room_manager.rooms.get_mut(&room_id).unwrap();
 
-        match room.handle_turn(token, player_id) {
-            Ok(event) => {
-                room.broadcast(EventToken::GameEvent(event), player_id, false)
-                    .unwrap();
+        match token {
+            GameCommand::Turn(turn) => {
+                if room.player_turns[room.current_turn.index] != player_id {
+                    return Err(Error::NotATurn);
+                }
+
+                match turn {
+                    CommandTurn::Discard(card) => {
+                        if let Some(_) = room.current_turn.discarded_card {
+                            return Err(Error::RepeatTurn);
+                        }
+                        match room.handle_discard(player_id, card) {
+                            Ok(res) => {
+                                return Ok(GameEvent::Turn(EventTurn::Discard {
+                                    player_id,
+                                    card: res,
+                                }));
+                            }
+                            Err(err) => {
+                                return Err(err);
+                            }
+                        }
+                    }
+                    CommandTurn::Draw(draw) => {
+                        if let Some(_) = room.current_turn.drawn_card {
+                            return Err(Error::RepeatTurn);
+                        }
+
+                        let res = match draw {
+                            DrawSource::DiscardPile(number) => {
+                                match room
+                                    .handle_draw_from_discard_pile(usize::from(number), player_id)
+                                    .await
+                                {
+                                    Ok(res) => {
+                                        return Ok(GameEvent::Turn(EventTurn::Draw {
+                                            player_id,
+                                            source: DrawSource::DiscardPile(number),
+                                        }));
+                                    }
+                                    Err(err) => {
+                                        return Err(err);
+                                    }
+                                }
+                            }
+                            DrawSource::StockPile => {
+                                match room.handle_draw_from_stock_pile(player_id).await {
+                                    Ok(res) => {
+                                        return Ok(GameEvent::Turn(EventTurn::Draw {
+                                            player_id,
+                                            source: DrawSource::StockPile,
+                                        }));
+                                    }
+                                    Err(err) => {
+                                        return Err(err);
+                                    }
+                                }
+                            }
+                        };
+                    }
+                }
             }
-            Err(err) => {
-                room.ws_send_player(EventToken::ServerEvent(ServerEvent::Error(err)), player_id)
-                    .unwrap();
-            }
+            GameCommand::Make { cards } => match room.handle_meld(player_id, cards) {
+                Ok(res) => {
+                    return Ok(GameEvent::Make {
+                        player_id,
+                        cards: res,
+                    });
+                }
+                Err(err) => {
+                    return Err(err);
+                }
+            },
+            GameCommand::Put { cards } => match room.handle_put(player_id, cards) {
+                Ok(res) => {
+                    return Ok(GameEvent::Put {
+                        player_id,
+                        cards: res,
+                    });
+                }
+                Err(err) => {
+                    return Err(err);
+                }
+            },
         };
 
-        if true == room.try_next_turn() {
-            room.current_turn.reset();
-            room.broadcast(
-                EventToken::GameEvent(GameEvent::CurrentTurn(
-                    room.player_turns[room.current_turn.index],
-                )),
-                player_id,
-                true,
-            )
-            .unwrap();
-        };
+        // if true == room.try_next_turn() {
+        //     room.current_turn.reset();
+        //     broadcast(
+        //         room,
+        //         EventToken::GameEvent(GameEvent::CurrentTurn(
+        //             room.player_turns[room.current_turn.index],
+        //         )),
+        //         player_id,
+        //         true,
+        //     )
+        //     .await
+        //     .unwrap();
+        // };
+
+        // return result;
     }
 
-    Ok(())
+    return Err(Error::InvalidCommand);
 }

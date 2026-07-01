@@ -1,4 +1,4 @@
-use crate::{game::card::Card, network::ws::token::command::DrawSource};
+use crate::core::{card::Card, protocol::DrawSource};
 use serde::Serialize;
 
 #[derive(Serialize, Debug)]
@@ -12,6 +12,7 @@ pub enum EventToken {
 pub enum ServerEvent {
     Error(Error),
     PlayerCard(Vec<Card>),
+    DrawnCard { cards: Vec<Card> },
 }
 
 #[derive(Serialize, Debug)]
@@ -41,7 +42,7 @@ pub enum GameEvent {
     Make { player_id: u32, cards: Vec<Card> },
     Turn(EventTurn),
     CurrentTurn(u32),
-    DrawnCard { cards: Vec<Card> },
+    
 }
 
 #[derive(Serialize, Debug)]

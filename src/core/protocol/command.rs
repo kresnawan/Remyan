@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::game::{card::Card, room_config::RoomConfig};
+use crate::core::{card::Card, room::RoomConfig};
 
 #[derive(Deserialize, Debug)]
 pub enum CommandToken {

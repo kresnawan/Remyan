@@ -1,4 +1,6 @@
-use crate::{game::card::Card, network::ws::token::command::DrawSource};
+use crate::core::{card::Card, protocol::DrawSource};
+
+
 
 #[derive(Debug)]
 pub struct PlayerTurn {

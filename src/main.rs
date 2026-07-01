@@ -1,4 +1,4 @@
-use remyan::{AppInstance, game::app::App, network};
+use remyan::{AppInstance, core::app::App, network};
 use std::{sync::Arc};
 use tokio::sync::Mutex;
 

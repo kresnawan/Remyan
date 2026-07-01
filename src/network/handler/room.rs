@@ -1,7 +1,7 @@
 use axum::{Extension, Json, extract::Query, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::CookieJar;
 
-use crate::{AppInstance, game::room_config::RoomConfig, network::router::RoomIdQuery};
+use crate::{AppInstance, core::room::RoomConfig, network::router::RoomIdQuery};
 
 pub async fn handle_create_room(
     Extension(app): Extension<AppInstance>,

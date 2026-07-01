@@ -45,18 +45,20 @@ pub async fn handle_socket(socket: WebSocket, app: AppInstance, player_id: u32, 
                     }
 
                     if currently_playing {
-                        if let Err(_) =
-                            handle_game_command(txt, player_id, room_id, clone_app).await
-                        {
-                            continue;
-                        };
+                        handle_game_command(txt, player_id, room_id, clone_app).await;
                     } else {
-                        if let Err(_) =
-                            handle_room_command(txt, player_id, room_id, clone_app).await
-                        {
-                            continue;
-                        };
+                        handle_room_command(txt, player_id, room_id, clone_app).await;
                     }
+
+                    // match result {
+                    //     Ok(res) => {
+                    //         broadcast(room, EventToken::GameEvent(res), player_id, false).await;
+                    //     }
+                    //     Err(err) => {
+                    //         ws_send_player(room, EventToken::ServerEvent(Error(err)), player_id)
+                    //             .await;
+                    //     }
+                    // }
                 }
 
                 Message::Close(_) => {
