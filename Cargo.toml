@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["core", "server"]
+members = ["client","core", "server"]
 
 [workspace.dependencies]
 axum = { version = "0.8.9", features = ["json", "macros", "ws"] }
