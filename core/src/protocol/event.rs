@@ -21,6 +21,7 @@ pub enum RoomEvent {
     StartGame,
     Message { message: String, sender_id: u32 },
     EditConfig,
+    GameEnded
 }
 
 #[derive(Serialize, Debug)]
@@ -29,7 +30,6 @@ pub enum GameEvent {
     Make { player_id: u32, cards: Vec<Card> },
     Turn(TurnEvent),
     CurrentTurn(u32),
-    
 }
 
 #[derive(Serialize, Debug)]

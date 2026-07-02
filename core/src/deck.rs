@@ -45,6 +45,33 @@ impl Deck {
         return Self { cards: deck };
     }
 
+    pub fn new_exp() -> Self {
+        let mut deck: Vec<Card> = Vec::new();
+
+        for court_type in CourtType::iter() {
+            deck.push(Card {
+                card_icon: Some(CardIcon::Club),
+                card_type: CardType::Court(court_type),
+            });
+        }
+
+        for spot_number in SpotNumber::iter() {
+            deck.push(Card {
+                card_icon: Some(CardIcon::Diamond),
+                card_type: CardType::Spot(spot_number),
+            });
+        }
+        
+        for spot_number in SpotNumber::iter() {
+            deck.push(Card {
+                card_icon: Some(CardIcon::Spade),
+                card_type: CardType::Spot(spot_number),
+            });
+        }
+
+        return Self { cards: deck };
+    }
+
     pub fn shuffle(&mut self) {
         let mut rng = rand::rng();
         self.cards.shuffle(&mut rng);

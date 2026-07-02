@@ -143,10 +143,7 @@ pub async fn handle_game_command(
                     TurnCommand::Draw(draw) => {
                         match draw {
                             DrawSource::DiscardPile => {
-                                match room
-                                    .handle_draw_from_discard_pile(player_id)
-                                    .await
-                                {
+                                match room.handle_draw_from_discard_pile(player_id).await {
                                     Ok(res) => {
                                         server_room
                                             .broadcast(
@@ -162,7 +159,9 @@ pub async fn handle_game_command(
                                             .await;
                                         server_room
                                             .send_player(
-                                                EventToken::ServerEvent(ServerEvent::DrawnCard(res)),
+                                                EventToken::ServerEvent(ServerEvent::DrawnCard(
+                                                    res,
+                                                )),
                                                 player_id,
                                             )
                                             .await;
@@ -195,7 +194,9 @@ pub async fn handle_game_command(
                                             .await;
                                         server_room
                                             .send_player(
-                                                EventToken::ServerEvent(ServerEvent::DrawnCard(res)),
+                                                EventToken::ServerEvent(ServerEvent::DrawnCard(
+                                                    res,
+                                                )),
                                                 player_id,
                                             )
                                             .await;
@@ -257,18 +258,27 @@ pub async fn handle_game_command(
             },
         };
 
-        println!("Pengecekan turn dijalankan");
-        if true == room.try_next_turn() {
-            room.current_turn.reset();
-            server_room
-                .broadcast(
-                    true,
-                    player_id,
-                    EventToken::GameEvent(GameEvent::CurrentTurn(
-                        room.player_turns[room.current_turn.index],
-                    )),
-                )
-                .await;
+        match room.try_next_turn() {
+            Some(n) => {
+                if n {
+                    room.current_turn.reset();
+                    server_room
+                        .broadcast(
+                            true,
+                            player_id,
+                            EventToken::GameEvent(GameEvent::CurrentTurn(
+                                room.player_turns[room.current_turn.index],
+                            )),
+                        )
+                        .await;
+                }
+            }
+            None => {
+                room.current_turn.reset();
+                server_room
+                    .broadcast(true, player_id, EventToken::RoomEvent(RoomEvent::GameEnded))
+                    .await;
+            }
         };
     } else {
         server_room

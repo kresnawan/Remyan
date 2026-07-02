@@ -33,7 +33,8 @@ pub struct Room {
 impl Room {
     pub fn new(cfg: RoomConfig, host_id: u32) -> Result<Self, String> {
         let new_session_player = RoomPlayer::new();
-        let deck = Deck::new(cfg.with_joker);
+        // let deck = Deck::new(cfg.with_joker);
+        let deck = Deck::new_exp();
 
         let random_number: u64 = rand::rng().random();
         let mut players = HashMap::new();
@@ -109,7 +110,7 @@ impl Room {
         Ok(())
     }
 
-    pub fn try_next_turn(&mut self) -> bool {
+    pub fn try_next_turn(&mut self) -> Option<bool> {
         if self.current_turn.is_complete() {
             if self.current_turn.index == self.players.len() - 1 {
                 self.current_turn.index = 0;
@@ -117,10 +118,15 @@ impl Room {
                 self.current_turn.index += 1;
             }
 
-            return true;
+            if self.stock_pile.is_empty() {
+                self.currently_playing = false;
+                return None
+            }
+
+            return Some(true);
         }
 
-        return false;
+        return Some(false);
     }
 
     pub fn check_card_eligibility(
@@ -128,24 +134,10 @@ impl Room {
         player_card_hashset: &HashSet<&Card>,
         was_melding: bool,
     ) -> bool {
-        let arr: Vec<SpotNumber> = SpotNumber::iter().collect();
-        let court_type_iter: Vec<CourtType> = CourtType::iter().collect();
-
         match card.card_type {
-            CardType::Spot(a) => {
-                let mut s_number: Option<usize> = None;
-                for (index, &sp) in arr.iter().enumerate() {
-                    if sp == a {
-                        s_number = Some(index);
-                        break;
-                    }
-                }
-
-                if s_number == None {
-                    return false;
-                }
-
-                let s_number_unw = s_number.unwrap();
+            CardType::Spot(_) => {
+                let spot_number_iter: Vec<SpotNumber> = SpotNumber::iter().collect();
+                let spot_index = card.get_spot_index().unwrap();
 
                 let mut three_smaller = false;
                 let mut two_smaller = false;
@@ -154,41 +146,41 @@ impl Room {
                 let mut two_greater = false;
                 let mut three_greater = false;
 
-                if s_number_unw >= 3 {
+                if spot_index >= 3 {
                     three_smaller = player_card_hashset.contains(&Card {
                         card_icon: card.card_icon,
-                        card_type: CardType::Spot(*arr.get(s_number_unw - 3).unwrap()),
+                        card_type: CardType::Spot(*spot_number_iter.get(spot_index - 3).unwrap()),
                     });
                 }
 
-                if s_number_unw >= 2 {
+                if spot_index >= 2 {
                     two_smaller = player_card_hashset.contains(&Card {
                         card_icon: card.card_icon,
-                        card_type: CardType::Spot(*arr.get(s_number_unw - 2).unwrap()),
+                        card_type: CardType::Spot(*spot_number_iter.get(spot_index - 2).unwrap()),
                     });
                 }
-                if s_number_unw >= 1 {
+                if spot_index >= 1 {
                     one_smaller = player_card_hashset.contains(&Card {
                         card_icon: card.card_icon,
-                        card_type: CardType::Spot(*arr.get(s_number_unw - 1).unwrap()),
+                        card_type: CardType::Spot(*spot_number_iter.get(spot_index - 1).unwrap()),
                     });
                 }
-                if s_number_unw <= 7 {
+                if spot_index <= 7 {
                     one_greater = player_card_hashset.contains(&Card {
                         card_icon: card.card_icon,
-                        card_type: CardType::Spot(*arr.get(s_number_unw + 1).unwrap()),
+                        card_type: CardType::Spot(*spot_number_iter.get(spot_index + 1).unwrap()),
                     });
                 }
-                if s_number_unw <= 6 {
+                if spot_index <= 6 {
                     two_greater = player_card_hashset.contains(&Card {
                         card_icon: card.card_icon,
-                        card_type: CardType::Spot(*arr.get(s_number_unw + 2).unwrap()),
+                        card_type: CardType::Spot(*spot_number_iter.get(spot_index + 2).unwrap()),
                     });
                 }
-                if s_number_unw <= 5 {
+                if spot_index <= 5 {
                     three_greater = player_card_hashset.contains(&Card {
                         card_icon: card.card_icon,
-                        card_type: CardType::Spot(*arr.get(s_number_unw + 3).unwrap()),
+                        card_type: CardType::Spot(*spot_number_iter.get(spot_index + 3).unwrap()),
                     });
                 }
 
@@ -212,57 +204,42 @@ impl Room {
                 }
 
                 if was_melding {
-                    if player_ace_count >= 2 {
-                        return true;
-                    }
+                    return player_ace_count >= 2;
                 } else {
-                    if player_ace_count >= 3 {
-                        return true;
-                    }
+                    return player_ace_count >= 3;
                 }
             }
-            CardType::Court(a) => {
-                let mut s_number: Option<usize> = None;
-                for (index, &sp) in court_type_iter.iter().enumerate() {
-                    if sp == a {
-                        s_number = Some(index);
-                        break;
-                    }
-                }
-
-                if s_number == None {
-                    return false;
-                }
-
-                let s_number_unw = s_number.unwrap();
+            CardType::Court(_) => {
+                let court_type_iter: Vec<CourtType> = CourtType::iter().collect();
+                let court_index = card.get_court_index().unwrap();
 
                 let mut two_smaller = false;
                 let mut one_smaller = false;
                 let mut one_greater = false;
                 let mut two_greater = false;
 
-                if s_number_unw >= 2 {
+                if court_index >= 2 {
                     two_smaller = player_card_hashset.contains(&Card {
                         card_icon: card.card_icon,
-                        card_type: CardType::Court(*court_type_iter.get(s_number_unw - 2).unwrap()),
+                        card_type: CardType::Court(*court_type_iter.get(court_index - 2).unwrap()),
                     });
                 }
-                if s_number_unw >= 1 {
+                if court_index >= 1 {
                     one_smaller = player_card_hashset.contains(&Card {
                         card_icon: card.card_icon,
-                        card_type: CardType::Court(*court_type_iter.get(s_number_unw - 1).unwrap()),
+                        card_type: CardType::Court(*court_type_iter.get(court_index - 1).unwrap()),
                     });
                 }
-                if s_number_unw <= 1 {
+                if court_index <= 1 {
                     one_greater = player_card_hashset.contains(&Card {
                         card_icon: card.card_icon,
-                        card_type: CardType::Court(*court_type_iter.get(s_number_unw + 1).unwrap()),
+                        card_type: CardType::Court(*court_type_iter.get(court_index + 1).unwrap()),
                     });
                 }
-                if s_number_unw <= 0 {
+                if court_index <= 0 {
                     two_greater = player_card_hashset.contains(&Card {
                         card_icon: card.card_icon,
-                        card_type: CardType::Court(*court_type_iter.get(s_number_unw + 2).unwrap()),
+                        card_type: CardType::Court(*court_type_iter.get(court_index + 2).unwrap()),
                     });
                 }
 

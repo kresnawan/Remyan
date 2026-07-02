@@ -29,9 +29,6 @@ impl RoomConfig {
         number_of_jokers: NumberOfJokers,
         joker_type: Option<Card>,
     ) -> Result<Self, String> {
-        // if player_count < 3 || player_count > 4 {
-        //     return Err(String::from("Jumlah player antara 3 atau 4"));
-        // }
 
         let mut cfg = Self {
             allow_court_stacking: allow_court_stacking,
@@ -40,7 +37,7 @@ impl RoomConfig {
             with_joker: with_joker,
             hitter_scoring: hitter_scoring,
             number_of_jokers: number_of_jokers,
-            joker_type: None,
+            joker_type: joker_type,
         };
 
         if with_joker {

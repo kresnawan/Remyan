@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumIter;
+use strum::IntoEnumIterator;
 
 #[derive(Debug, EnumIter, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub enum CourtType {
@@ -65,5 +66,29 @@ impl Card {
                 return 5;
             }
         }
+    }
+
+    pub fn get_spot_index(&self) -> Option<usize> {
+        for (index, sn) in SpotNumber::iter().enumerate() {
+            if let CardType::Spot(n) = self.card_type {
+                if n == sn {
+                    return Some(index);
+                }
+            }
+        }
+
+        return None;
+    }
+
+    pub fn get_court_index(&self) -> Option<usize> {
+        for (index, sn) in CourtType::iter().enumerate() {
+            if let CardType::Court(n) = self.card_type {
+                if n == sn {
+                    return Some(index);
+                }
+            }
+        }
+
+        return None;
     }
 }
