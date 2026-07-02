@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::core::{card::Card, room::RoomConfig};
+use crate::{card::Card, protocol::DrawSource, room::RoomConfig};
 
 #[derive(Deserialize, Debug)]
 pub enum CommandToken {
@@ -23,17 +23,11 @@ pub enum GameCommand {
     Make {
         cards: Vec<Card>
     },
-    Turn(CommandTurn)
+    Turn(TurnCommand)
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub enum DrawSource {
-    StockPile,
-    DiscardPile(u8),
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub enum CommandTurn {
+pub enum TurnCommand {
     Draw(DrawSource),
     Discard(Card),
 }

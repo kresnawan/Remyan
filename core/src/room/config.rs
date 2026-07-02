@@ -1,12 +1,11 @@
+use crate::{Card, CardType};
 use serde::Deserialize;
-
-use crate::core::card::{Card, CardType};
 
 #[derive(Debug, Clone, Deserialize)]
 pub enum NumberOfJokers {
     None,
     Two,
-    Four
+    Four,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -30,7 +29,6 @@ impl RoomConfig {
         number_of_jokers: NumberOfJokers,
         joker_type: Option<Card>,
     ) -> Result<Self, String> {
-        
         // if player_count < 3 || player_count > 4 {
         //     return Err(String::from("Jumlah player antara 3 atau 4"));
         // }
@@ -51,7 +49,11 @@ impl RoomConfig {
                     CardType::Spot(_) => {
                         cfg.joker_type = Some(n);
                     }
-                    _ => return Err(String::from("Tipe joker harus angka biasa [Create Session Config gagal]")),
+                    _ => {
+                        return Err(String::from(
+                            "Tipe joker harus angka biasa [Create Session Config gagal]",
+                        ));
+                    }
                 },
                 None => {}
             }

@@ -1,6 +1,4 @@
-use crate::core::{card::Card, protocol::DrawSource};
-
-
+use crate::{Card, protocol::DrawSource};
 
 #[derive(Debug)]
 pub struct PlayerTurn {
@@ -24,7 +22,7 @@ impl PlayerTurn {
 
     pub fn is_complete(&self) -> bool {
         match self.draw_source {
-            Some(DrawSource::DiscardPile(_)) => {
+            Some(DrawSource::DiscardPile) => {
                 if let Some(_) = self.drawn_card
                     && let Some(_) = self.melded_card
                     && let Some(_) = self.discarded_card

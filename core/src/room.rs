@@ -2,10 +2,6 @@ use rand::RngExt;
 use std::collections::{HashMap, HashSet};
 use strum::IntoEnumIterator;
 
-use crate::core::{
-        card::{Card, CardType, CourtType, SpotNumber}, card_game::CardGame, deck::Deck, player_turn::PlayerTurn, protocol::Error
-    };
-
 mod config;
 mod manager;
 mod player;
@@ -13,6 +9,11 @@ mod player;
 pub use config::*;
 pub use manager::*;
 pub use player::*;
+
+use crate::{
+    Card, CardGame, CardType, CourtType, Deck, PlayerTurn, SpotNumber,
+    protocol::{DrawSource, Error},
+};
 
 #[derive(Debug)]
 pub struct Room {
@@ -106,10 +107,6 @@ impl Room {
         self.player_turns.push(player_id);
 
         Ok(())
-    }
-
-    fn get_room_player(&self, player_id: u32) -> Option<&RoomPlayer> {
-        self.players.get(&player_id)
     }
 
     pub fn try_next_turn(&mut self) -> bool {
@@ -293,50 +290,55 @@ impl Room {
  */
 
 impl Room {
-    pub async fn handle_draw_from_discard_pile(
-        &mut self,
-        number: usize,
-        player_id: u32,
-    ) -> Result<Vec<Card>, Error> {
-        let mut pile = self.discard_pile.iter().rev().peekable();
-
-        let player = self.get_room_player(player_id).unwrap();
-        let player_card: HashSet<&Card> = player.hand_cards.iter().collect();
-
-        if number > self.players.len() - 1 {
-            return Err(Error::TooManyDraw);
+    pub async fn handle_draw_from_discard_pile(&mut self, player_id: u32) -> Result<Card, Error> {
+        let max_draw = self.players.len() - 1;
+        if &Some(DrawSource::StockPile) == &self.current_turn.draw_source {
+            return Err(Error::RepeatTurn);
         }
 
-        for _ in 0..number {
-            let card_from_pile = pile.peek().unwrap();
-            let is_eligible = Room::check_card_eligibility(
-                *card_from_pile,
-                &player_card,
-                !player.melded_cards.is_empty(),
-            );
-            if !is_eligible {
-                return Err(Error::Ineligible);
+        if let Some(arr) = &self.current_turn.drawn_card {
+            if arr.len() > self.players.len() - 1 {
+                return Err(Error::TooManyDraw);
             }
+        }
 
+        let mut pile = self.discard_pile.iter().rev().peekable();
+
+        let player = self.players.get_mut(&player_id).unwrap();
+        let player_card: HashSet<&Card> = player.hand_cards.iter().collect();
+
+        for _ in 0..max_draw {
+            if let Some(card) = pile.peek() {
+                let is_eligible = Room::check_card_eligibility(
+                    *card,
+                    &player_card,
+                    !player.melded_cards.is_empty(),
+                );
+                if !is_eligible {
+                    return Err(Error::Ineligible);
+                }
+            }
             pile.next();
         }
 
-        let player = self.players.get_mut(&player_id).unwrap();
-        self.current_turn.drawn_card = Some(Vec::new());
-
-        let current_turn_drawn_cards = self.current_turn.drawn_card.as_mut().unwrap();
-
-        for _ in 0..number {
-            if let Some(n) = self.discard_pile.pop() {
-                current_turn_drawn_cards.push(n.clone());
-                player.hand_cards.push(n);
+        if let Some(card) = self.discard_pile.pop() {
+            if let None = self.current_turn.drawn_card {
+                self.current_turn.drawn_card = Some(Vec::new());
             }
+
+            let current_turn_drawn_cards = self.current_turn.drawn_card.as_mut().unwrap();
+
+            current_turn_drawn_cards.push(card);
+            player.hand_cards.push(card);
+
+            if self.current_turn.draw_source == None {
+                self.current_turn.draw_source = Some(DrawSource::DiscardPile);
+            }
+
+            return Ok(card);
+        } else {
+            return Err(Error::CardNotFound);
         }
-
-        let drawn_cards = self.current_turn.drawn_card.as_ref().unwrap();
-        let copied = drawn_cards.clone();
-
-        Ok(copied)
     }
 
     pub async fn handle_draw_from_stock_pile(&mut self, player_id: u32) -> Result<Card, Error> {
@@ -344,6 +346,7 @@ impl Room {
         let player = self.players.get_mut(&player_id).unwrap();
 
         if let Some(card) = drawn_card {
+            self.current_turn.draw_source = Some(DrawSource::StockPile);
             self.current_turn.drawn_card = Some(vec![card]);
             player.hand_cards.push(card);
             return Ok(card);

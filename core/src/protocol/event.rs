@@ -1,5 +1,6 @@
-use crate::core::{card::Card, protocol::DrawSource};
 use serde::Serialize;
+
+use crate::{Card, protocol::{DrawSource, Error}};
 
 #[derive(Serialize, Debug)]
 pub enum EventToken {
@@ -12,21 +13,7 @@ pub enum EventToken {
 pub enum ServerEvent {
     Error(Error),
     PlayerCard(Vec<Card>),
-    DrawnCard { cards: Vec<Card> },
-}
-
-#[derive(Serialize, Debug)]
-pub enum Error {
-    NotAHost,
-    PlayerNotEnough,
-    RoomIsCurrentlyPlaying,
-    TooManyDraw,
-    Ineligible,
-    CardNotFound,
-    RepeatTurn,
-    InvalidCommand,
-    RequireMeld,
-    NotATurn,
+    DrawnCard(Card),
 }
 
 #[derive(Serialize, Debug)]
@@ -40,13 +27,13 @@ pub enum RoomEvent {
 pub enum GameEvent {
     Put { player_id: u32, cards: Vec<Card> },
     Make { player_id: u32, cards: Vec<Card> },
-    Turn(EventTurn),
+    Turn(TurnEvent),
     CurrentTurn(u32),
     
 }
 
 #[derive(Serialize, Debug)]
-pub enum EventTurn {
+pub enum TurnEvent {
     Draw { player_id: u32, source: DrawSource },
     Discard { player_id: u32, card: Card },
 }
