@@ -1,6 +1,12 @@
-use client::ui::button::{Button, Dimension, Object, Position, RegularButton};
+use client::{
+    page::{Page, main_menu::MainMenu},
+    ui::{
+        Object,
+        button::{Button, regular_button::RegularButton},
+        config::{dimension::Dimension, position::Position},
+    },
+};
 use macroquad::prelude::*;
-use remyan_core::Player;
 
 fn window_config() -> Conf {
     Conf {
@@ -24,13 +30,8 @@ pub struct App {
 
 impl App {
     pub fn new() -> Self {
-        let mut btn = RegularButton::new(Position::new(100.0, 100.0), Dimension::new(100.0, 50.0));
-        btn.on_click(|| println!("Clicked"));
         Self {
-            current_page: Box::new(MainMenu::new(
-                String::from("Kresnawan"),
-                vec![Box::from(btn)],
-            )),
+            current_page: Box::new(MainMenu::new("Kresnawan")),
         }
     }
 
@@ -42,48 +43,4 @@ impl App {
             next_frame().await
         }
     }
-}
-
-pub struct MainMenu {
-    player_name: String,
-    objects: Vec<Box<dyn Object>>,
-}
-
-impl MainMenu {
-    pub fn new(player_name: String, objects: Vec<Box<dyn Object>>) -> Self {
-        Self {
-            player_name,
-            objects,
-        }
-    }
-}
-
-pub struct Room {
-    players: Vec<Player>,
-}
-
-impl Page for Room {
-    fn update(&mut self) {}
-    fn draw(&self) {}
-}
-
-impl Page for MainMenu {
-    fn update(&mut self) {
-        for item in &mut self.objects {
-            item.update();
-        }
-    }
-    fn draw(&self) {
-        clear_background(RED);
-        for item in &self.objects {
-            item.draw();
-        }
-    }
-}
-
-pub trait Page {
-    fn update(&mut self) {
-        
-    }
-    fn draw(&self) {}
 }
