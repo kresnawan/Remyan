@@ -1,18 +1,18 @@
 use macroquad::window::next_frame;
 
-use crate::page::{Page, main_menu::{self, MainMenu}, room::Room};
+use crate::page::{Page, main_menu::MainMenu, room::Room};
 
-pub mod ui;
 pub mod page;
+pub mod ui;
 
 pub enum PageIndex {
     MainMenu = 0,
-    Room = 1
+    Room = 1,
 }
 
 pub struct App {
     pub current_page: usize,
-    pub pages: Vec<Box<dyn Page>>
+    pub pages: Vec<Box<dyn Page>>,
 }
 
 impl App {
@@ -21,16 +21,16 @@ impl App {
         let room = Box::new(Room::new());
         Self {
             current_page: PageIndex::MainMenu as usize,
-            pages: vec![main_menu, room]
+            pages: vec![main_menu, room],
         }
     }
 
     fn get_current_page_mut(&mut self) -> &mut Box<dyn Page> {
-        return &mut self.pages[self.current_page]
+        return &mut self.pages[self.current_page];
     }
 
     fn get_current_page(&mut self) -> &Box<dyn Page> {
-        return &self.pages[self.current_page]
+        return &self.pages[self.current_page];
     }
 
     pub async fn init(&mut self) {

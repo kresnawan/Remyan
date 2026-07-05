@@ -1,7 +1,11 @@
 use macroquad::prelude::*;
 
 use crate::ui::{
-    Object, button::{Button, ButtonConfig}, config::{dimension::DimensionConfig, position::PositionConfig}, font::Nunito,
+    Object,
+    button::{Button, ButtonConfig},
+    config::position::PositionConfig,
+    draw::draw_rectangle_extended,
+    gradient::Gradient,
 };
 
 pub struct RegularButton {
@@ -13,7 +17,8 @@ pub struct RegularButton {
     text: String,
     text_size: f32,
     font: Font,
-    background_color: Color,
+    background_color: Gradient,
+    radius: f32,
     text_color: Color,
     is_center_x: bool,
     is_center_y: bool,
@@ -45,6 +50,17 @@ impl RegularButton {
 
     pub fn to_center_y(mut self) -> Self {
         self.is_center_y = true;
+
+        return self;
+    }
+
+    pub fn set_dimensions(mut self, width: f32, height: f32) -> Self {
+        if width > 0.0 {
+            self.width = width;
+        }
+        if height > 0.0 {
+            self.height = height;
+        }
 
         return self;
     }
@@ -111,14 +127,12 @@ impl Object for RegularButton {
             );
         }
 
-        let btn_color = self.background_color;
-
         //     if self.is_hovered {
         //     Color::new(0.12, 0.53, 0.90, 1.0)
         // } else {
         //     Color::new(0.07, 0.45, 0.80, 1.0)
         // };
-        
+
         let text = &self.text;
         let font_size = self.text_size;
         let text_dimensions = measure_text(text, Some(&self.font), font_size as u16, 1.0);
@@ -126,7 +140,16 @@ impl Object for RegularButton {
         let net_width: f32 = self.width;
         let net_height: f32 = self.height;
 
-        draw_rectangle(draw_x, draw_y, net_width, net_height, btn_color);
+        draw_rectangle_extended(
+            draw_x,
+            draw_y,
+            net_width,
+            net_height,
+            self.radius,
+            self.background_color.colors[0],
+            self.background_color.colors[1],
+            self.background_color.angle,
+        );
 
         let text_x = draw_x + (net_width / 2.0) - (text_dimensions.width / 2.0);
         let text_y =
@@ -166,6 +189,7 @@ impl Button for RegularButton {
             is_center_x: false,
             is_center_y: false,
             background_color: config.background_color,
+            radius: config.radius,
             text_color: config.text_color,
             on_click_event: None,
             is_clicked: false,

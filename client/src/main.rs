@@ -1,10 +1,4 @@
-use client::{
-    App, page::{Page, main_menu::MainMenu}, ui::{
-        Object,
-        button::{Button, regular_button::RegularButton},
-        config::{dimension::Dimension, position::Position},
-    },
-};
+use client::App;
 use macroquad::prelude::*;
 
 fn window_config() -> Conf {
@@ -23,5 +17,3 @@ async fn main() {
     let mut app = App::new();
     app.init().await;
 }
-
-

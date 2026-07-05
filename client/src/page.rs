@@ -1,5 +1,3 @@
-use crate::App;
-
 pub mod main_menu;
 pub mod room;
 
