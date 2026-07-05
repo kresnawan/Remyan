@@ -1,9 +1,7 @@
 use macroquad::prelude::*;
 
 use crate::ui::{
-    Object,
-    button::{Button, ButtonConfig},
-    config::{dimension::DimensionConfig, position::PositionConfig},
+    Object, button::{Button, ButtonConfig}, config::{dimension::DimensionConfig, position::PositionConfig}, font::Nunito,
 };
 
 pub struct RegularButton {
@@ -14,14 +12,46 @@ pub struct RegularButton {
     shadow_offset: f32,
     text: String,
     text_size: f32,
-    on_click_event: Option<Box<dyn Fn() + 'static>>,
+    font: Font,
+    background_color: Color,
+    text_color: Color,
+    is_center_x: bool,
+    is_center_y: bool,
+    on_click_event: Option<Box<dyn Fn() -> Option<usize> + 'static>>,
     is_pressed: bool,
     is_hovered: bool,
     is_clicked: bool,
 }
 
+impl RegularButton {
+    pub fn set_padding(mut self, x: f32, y: f32) -> Self {
+        self.width += x * 2.0;
+        self.height += y * 2.0;
+        return self;
+    }
+
+    pub fn to_center(mut self) -> Self {
+        self.is_center_x = true;
+        self.is_center_y = true;
+
+        return self;
+    }
+
+    pub fn to_center_x(mut self) -> Self {
+        self.is_center_x = true;
+
+        return self;
+    }
+
+    pub fn to_center_y(mut self) -> Self {
+        self.is_center_y = true;
+
+        return self;
+    }
+}
+
 impl Object for RegularButton {
-    fn update(&mut self) {
+    fn update(&mut self) -> Option<usize> {
         let (mouse_x, mouse_y) = mouse_position();
         let btn_x = self.x;
         let btn_y = self.y;
@@ -33,22 +63,40 @@ impl Object for RegularButton {
             && mouse_y <= btn_y + btn_h;
 
         let is_pressed = is_hovered && is_mouse_button_down(MouseButton::Left);
-        let is_clicked = is_hovered && is_mouse_button_pressed(MouseButton::Left);
+        let is_clicked = is_hovered && is_mouse_button_released(MouseButton::Left);
 
         self.is_hovered = is_hovered;
         self.is_pressed = is_pressed;
         self.is_clicked = is_clicked;
 
+        if self.is_center_x {
+            self.x = screen_width() / 2.0 - self.width / 2.0;
+        }
+
+        if self.is_center_y {
+            self.y = screen_height() / 2.0 - self.height / 2.0;
+        }
+
         if let Some(event) = &self.on_click_event {
             if self.is_clicked {
-                event();
+                if let Some(n) = event() {
+                    return Some(n);
+                } else {
+                    return None;
+                }
             }
         }
+
+        return None;
     }
 
     fn draw(&self) {
         let (draw_x, draw_y, current_shadow) = if self.is_pressed {
-            (self.x + self.shadow_offset, self.y + self.shadow_offset, 0.0)
+            (
+                self.x + self.shadow_offset,
+                self.y + self.shadow_offset,
+                0.0,
+            )
         } else {
             (self.x, self.y, self.shadow_offset)
         };
@@ -63,48 +111,72 @@ impl Object for RegularButton {
             );
         }
 
-        let btn_color = if self.is_hovered {
-            Color::new(0.12, 0.53, 0.90, 1.0)
-        } else {
-            Color::new(0.07, 0.45, 0.80, 1.0)
-        };
-        draw_rectangle(draw_x, draw_y, self.width, self.height, btn_color);
+        let btn_color = self.background_color;
 
+        //     if self.is_hovered {
+        //     Color::new(0.12, 0.53, 0.90, 1.0)
+        // } else {
+        //     Color::new(0.07, 0.45, 0.80, 1.0)
+        // };
+        
         let text = &self.text;
         let font_size = self.text_size;
-        let text_dimensions = measure_text(text, None, font_size as u16, 1.0);
+        let text_dimensions = measure_text(text, Some(&self.font), font_size as u16, 1.0);
 
-        let text_x = draw_x + (self.width - text_dimensions.width) / 2.0;
-        let text_y = draw_y + (self.height + text_dimensions.height) / 2.0 - 2.0;
+        let net_width: f32 = self.width;
+        let net_height: f32 = self.height;
 
-        draw_text(text, text_x, text_y, font_size, WHITE);
+        draw_rectangle(draw_x, draw_y, net_width, net_height, btn_color);
+
+        let text_x = draw_x + (net_width / 2.0) - (text_dimensions.width / 2.0);
+        let text_y =
+            (draw_y + text_dimensions.height) + (net_height / 2.0) - (text_dimensions.height / 2.0);
+
+        draw_text_ex(
+            text,
+            text_x,
+            text_y,
+            TextParams {
+                font: Some(&self.font),
+                font_size: self.text_size as u16,
+                color: self.text_color,
+                ..Default::default()
+            },
+        );
     }
 }
 
 impl Button for RegularButton {
-    fn new<T, U>(position: T, dimension: U, config: ButtonConfig) -> Self
+    fn new<T>(position: T, config: ButtonConfig) -> Self
     where
         T: PositionConfig,
-        U: DimensionConfig,
         Self: Sized,
     {
+        let text_dimensions = measure_text(&config.text, None, config.text_size as u16, 1.0);
+
         RegularButton {
             x: position.get_x(),
             y: position.get_y(),
-            width: dimension.get_width(),
-            height: dimension.get_height(),
+            width: text_dimensions.width,
+            height: text_dimensions.height,
             shadow_offset: 6.0,
             text: config.text,
             text_size: config.text_size,
+            font: config.font,
+            is_center_x: false,
+            is_center_y: false,
+            background_color: config.background_color,
+            text_color: config.text_color,
             on_click_event: None,
             is_clicked: false,
             is_hovered: false,
             is_pressed: false,
         }
     }
+
     fn on_click<F>(mut self, callback: F) -> Self
     where
-        F: Fn() -> () + 'static,
+        F: Fn() -> Option<usize> + 'static,
     {
         self.on_click_event = Some(Box::new(callback));
         return self;

@@ -1,3 +1,5 @@
+use macroquad::miniquad::window::screen_size;
+
 pub trait PositionConfig {
     fn get_x(&self) -> f32;
     fn get_y(&self) -> f32;
