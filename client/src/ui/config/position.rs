@@ -23,3 +23,13 @@ impl PositionConfig for Position {
         return self.y;
     }
 }
+
+use crate::ui::{XAlignment, YAlignment};
+
+#[derive(Clone)]
+pub struct ObjectPosition {
+    pub x: f32,
+    pub y: f32,
+    pub x_alignment: Option<XAlignment>,
+    pub y_alignment: Option<YAlignment>,
+}

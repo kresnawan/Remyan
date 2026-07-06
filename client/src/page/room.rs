@@ -1,10 +1,17 @@
+use macroquad::{
+    color::{BLACK, Color},
+    window::{screen_height, screen_width},
+};
 use remyan_core::Player;
 
 use crate::{
-    PageIndex, page::Page, ui::{
+    PageIndex,
+    page::Page,
+    ui::{
         Object,
         button::{Button, ButtonConfig, regular_button::RegularButton},
         config::position::Position,
+        draw::draw_rectangle_extended,
     },
 };
 
@@ -15,13 +22,11 @@ pub struct Room {
 
 impl Room {
     pub fn new() -> Self {
-
-        let btn = Box::new(RegularButton::new(
-            Position::new(0.0, 0.0),
-            ButtonConfig::default("Room"),
-        ).on_click(|| {
-            return Some(PageIndex::MainMenu as usize)
-        }).set_padding(100.0, 50.0));
+        let btn = Box::new(
+            RegularButton::new(Position::new(0.0, 0.0), ButtonConfig::default("Room"))
+                .on_click(|| return Some(PageIndex::MainMenu as usize))
+                .set_padding(100.0, 50.0),
+        );
 
         Self {
             players: Vec::new(),
@@ -41,6 +46,18 @@ impl Page for Room {
         return None;
     }
     fn draw(&self) {
+        draw_rectangle_extended(
+            0.0,
+            0.0,
+            screen_width(),
+            screen_height(),
+            0.0,
+            Color::from_hex(0x7d0202),
+            Color::from_hex(0x2b0000),
+            30.0,
+            0.0,
+            BLACK,
+        );
         for i in &self.objects {
             i.draw();
         }

@@ -53,7 +53,7 @@ impl MainMenu {
         .set_dimensions(screen_width() / 2.0, 0.0)
         .set_alignment(Some(XAlignment::Center), None);
 
-        let div = Container::new(0.0, 500.0, || screen_width(), || screen_height())
+        let div = Container::new(0.0, 500.0, 0.0, 0.0, true, true)
             .add_child(Box::new(create_room_btn))
             .add_child(Box::new(join_room_btn))
             .add_child(Box::new(settings_btn));
@@ -87,6 +87,8 @@ impl Page for MainMenu {
             Color::from_hex(0x2b0000),
             
             30.0,
+            0.0,
+            BLACK
         );
         for item in &self.objects {
             item.draw();

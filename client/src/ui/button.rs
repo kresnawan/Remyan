@@ -20,6 +20,8 @@ pub struct ButtonConfig {
     background_color: Gradient,
     radius: f32,
     text_color: Color,
+    outline: f32,
+    outline_color: Color,
 }
 
 impl ButtonConfig {
@@ -28,6 +30,8 @@ impl ButtonConfig {
         text_size: f32,
         bg_color: Gradient,
         radius: f32,
+        outline: f32,
+        outline_color: Color,
         text_color: Color,
         font: Font,
     ) -> ButtonConfig {
@@ -36,6 +40,8 @@ impl ButtonConfig {
             text_size,
             font,
             radius,
+            outline,
+            outline_color,
             background_color: bg_color,
             text_color: text_color,
         }
@@ -50,8 +56,25 @@ impl ButtonConfig {
                 90.0,
                 vec![Color::from_hex(0xfca503), Color::from_hex(0xfc6203)],
             ),
+            outline: 3.0,
+            outline_color: WHITE,
             radius: 10.0,
             text_color: Color::from_hex(0x2b0000),
         }
     }
+}
+
+pub struct ButtonAttribute {
+    pub outline_thickness: f32,
+    pub outline_color: Color,
+    pub background_color: Gradient,
+    pub corner_radius: f32,
+    pub text_color: Color,
+    pub on_click_event: Option<Box<dyn Fn() -> Option<usize> + 'static>>,
+    pub is_clicked: bool,
+    pub is_hovered: bool,
+    pub is_pressed: bool,
+    pub shadow_offset: f32,
+    pub text_size: f32,
+    pub font: Font,
 }

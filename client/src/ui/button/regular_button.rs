@@ -1,55 +1,37 @@
 use macroquad::prelude::*;
 
 use crate::ui::{
-    Object, XAlignment, YAlignment,
-    button::{Button, ButtonConfig},
-    config::position::PositionConfig,
+    Object,
+    button::{Button, ButtonAttribute, ButtonConfig},
+    config::{
+        dimension::ObjectDimension,
+        position::{ObjectPosition, PositionConfig},
+    },
     draw::draw_rectangle_extended,
-    gradient::Gradient,
+    parent::ParentState,
 };
 
 pub struct RegularButton {
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
-    shadow_offset: f32,
+    position: ObjectPosition,
+    dimension: ObjectDimension,
+    parent: ParentState,
     text: String,
-    text_size: f32,
-    font: Font,
-    background_color: Gradient,
-    radius: f32,
-    text_color: Color,
-    parent_x: f32,
-    parent_y: f32,
-    x_alignment: Option<XAlignment>,
-    y_alignment: Option<YAlignment>,
-    on_click_event: Option<Box<dyn Fn() -> Option<usize> + 'static>>,
-    is_pressed: bool,
-    is_hovered: bool,
-    is_clicked: bool,
+    attribute: ButtonAttribute,
 }
 
 impl RegularButton {
     pub fn set_padding(mut self, x: f32, y: f32) -> Self {
-        self.width += x * 2.0;
-        self.height += y * 2.0;
-        return self;
-    }
-
-    pub fn set_alignment(mut self, x: Option<XAlignment>, y: Option<YAlignment>) -> Self {
-        self.x_alignment = x;
-        self.y_alignment = y;
-
+        self.dimension.width += x * 2.0;
+        self.dimension.height += y * 2.0;
         return self;
     }
 
     pub fn set_dimensions(mut self, width: f32, height: f32) -> Self {
         if width > 0.0 {
-            self.width = width;
+            self.dimension.width = width;
         }
         if height > 0.0 {
-            self.height = height;
+            self.dimension.height = height;
         }
 
         return self;
@@ -64,19 +46,13 @@ impl Object for RegularButton {
         parent_w: Option<f32>,
         parent_h: Option<f32>,
     ) -> Option<usize> {
-        if let Some(value) = parent_x {
-            self.parent_x = value;
-        }
-
-        if let Some(value) = parent_y {
-            self.parent_y = value;
-        }
+        self.update_alignment(parent_x, parent_y, parent_w, parent_h);
 
         let (mouse_x, mouse_y) = mouse_position();
-        let btn_x = self.x + self.parent_x;
-        let btn_y = self.y + self.parent_y;
-        let btn_w = self.width;
-        let btn_h = self.height;
+        let btn_x = self.position.x + self.parent.x;
+        let btn_y = self.position.y + self.parent.y;
+        let btn_w = self.dimension.width;
+        let btn_h = self.dimension.height;
         let is_hovered = mouse_x >= btn_x
             && mouse_x <= btn_x + btn_w
             && mouse_y >= btn_y
@@ -85,74 +61,12 @@ impl Object for RegularButton {
         let is_pressed = is_hovered && is_mouse_button_down(MouseButton::Left);
         let is_clicked = is_hovered && is_mouse_button_released(MouseButton::Left);
 
-        self.is_hovered = is_hovered;
-        self.is_pressed = is_pressed;
-        self.is_clicked = is_clicked;
+        self.attribute.is_hovered = is_hovered;
+        self.attribute.is_pressed = is_pressed;
+        self.attribute.is_clicked = is_clicked;
 
-        if let Some(value) = &self.x_alignment {
-            match value {
-                XAlignment::Left => {
-                    let parent_x_a = if let Some(value) = parent_x {
-                        value
-                    } else {
-                        0.0
-                    };
-
-                    self.x = parent_x_a;
-                }
-                XAlignment::Center => {
-                    let parent_w_a = if let Some(value) = parent_w {
-                        value
-                    } else {
-                        screen_width()
-                    };
-                    self.x = parent_w_a / 2.0 - self.width / 2.0;
-                }
-                XAlignment::Right => {
-                    let parent_w_a = if let Some(value) = parent_w {
-                        value
-                    } else {
-                        screen_width()
-                    };
-
-                    self.x = parent_w_a - self.width;
-                }
-            }
-        }
-
-        if let Some(value) = &self.y_alignment {
-            match value {
-                YAlignment::Top => {
-                    let parent_y_a = if let Some(value) = parent_x {
-                        value
-                    } else {
-                        0.0
-                    };
-
-                    self.y = parent_y_a;
-                }
-                YAlignment::Center => {
-                    let parent_h_a = if let Some(value) = parent_h {
-                        value
-                    } else {
-                        screen_height()
-                    };
-                    self.y = parent_h_a / 2.0 - self.height / 2.0;
-                }
-                YAlignment::Bottom => {
-                    let parent_h_a = if let Some(value) = parent_h {
-                        value
-                    } else {
-                        screen_height()
-                    };
-
-                    self.y = parent_h_a - self.height;
-                }
-            }
-        }
-
-        if let Some(event) = &self.on_click_event {
-            if self.is_clicked {
+        if let Some(event) = &self.attribute.on_click_event {
+            if self.attribute.is_clicked {
                 if let Some(n) = event() {
                     return Some(n);
                 } else {
@@ -165,27 +79,32 @@ impl Object for RegularButton {
     }
 
     fn draw(&self) {
-        let (draw_x, draw_y, current_shadow) = if self.is_pressed {
+        let (draw_x, draw_y, current_shadow) = if self.attribute.is_pressed {
             (
-                (self.x + self.parent_x) + self.shadow_offset,
-                (self.y + self.parent_y) + self.shadow_offset,
+                (self.position.x + self.parent.x) + self.attribute.shadow_offset,
+                (self.position.y + self.parent.y) + self.attribute.shadow_offset,
                 0.0,
             )
         } else {
             (
-                self.x + self.parent_x,
-                self.y + self.parent_y,
-                self.shadow_offset,
+                self.position.x + self.parent.x,
+                self.position.y + self.parent.y,
+                self.attribute.shadow_offset,
             )
         };
 
         if current_shadow > 0.0 {
-            draw_rectangle(
-                (self.x + self.parent_x) + self.shadow_offset,
-                (self.y + self.parent_y) + self.shadow_offset,
-                self.width,
-                self.height,
+            draw_rectangle_extended(
+                (self.position.x + self.parent.x) + self.attribute.shadow_offset,
+                (self.position.y + self.parent.y) + self.attribute.shadow_offset,
+                self.dimension.width,
+                self.dimension.height,
+                self.attribute.corner_radius,
                 Color::new(0.1, 0.1, 0.1, 0.25),
+                Color::new(0.1, 0.1, 0.1, 0.25),
+                self.attribute.background_color.angle,
+                0.0,
+                BLACK,
             );
         }
 
@@ -196,21 +115,23 @@ impl Object for RegularButton {
         // };
 
         let text = &self.text;
-        let font_size = self.text_size;
-        let text_dimensions = measure_text(text, Some(&self.font), font_size as u16, 1.0);
+        let font_size = self.attribute.text_size;
+        let text_dimensions = measure_text(text, Some(&self.attribute.font), font_size as u16, 1.0);
 
-        let net_width: f32 = self.width;
-        let net_height: f32 = self.height;
+        let net_width: f32 = self.dimension.width;
+        let net_height: f32 = self.dimension.height;
 
         draw_rectangle_extended(
             draw_x,
             draw_y,
             net_width,
             net_height,
-            self.radius,
-            self.background_color.colors[0],
-            self.background_color.colors[1],
-            self.background_color.angle,
+            self.attribute.corner_radius,
+            self.attribute.background_color.colors[0],
+            self.attribute.background_color.colors[1],
+            self.attribute.background_color.angle,
+            self.attribute.outline_thickness,
+            self.attribute.outline_color,
         );
 
         let text_x = draw_x + (net_width / 2.0) - (text_dimensions.width / 2.0);
@@ -222,12 +143,36 @@ impl Object for RegularButton {
             text_x,
             text_y,
             TextParams {
-                font: Some(&self.font),
-                font_size: self.text_size as u16,
-                color: self.text_color,
+                font: Some(&self.attribute.font),
+                font_size: self.attribute.text_size as u16,
+                color: self.attribute.text_color,
                 ..Default::default()
             },
         );
+    }
+
+    fn get_dimension(&self) -> ObjectDimension {
+        return self.dimension.clone();
+    }
+
+    fn get_parent_state(&self) -> ParentState {
+        return self.parent.clone();
+    }
+
+    fn get_position(&self) -> ObjectPosition {
+        return self.position.clone();
+    }
+
+    fn set_dimension(&mut self, value: ObjectDimension) {
+        self.dimension = value;
+    }
+
+    fn set_position(&mut self, value: ObjectPosition) {
+        self.position = value;
+    }
+
+    fn set_parent_state(&mut self, value: ParentState) {
+        self.parent = value;
     }
 }
 
@@ -235,30 +180,42 @@ impl Button for RegularButton {
     fn new<T>(position: T, config: ButtonConfig) -> Self
     where
         T: PositionConfig,
-        Self: Sized,
+        Self: Sized + Object,
     {
         let text_dimensions = measure_text(&config.text, None, config.text_size as u16, 1.0);
 
         RegularButton {
-            x: position.get_x(),
-            y: position.get_y(),
-            width: text_dimensions.width,
-            height: text_dimensions.height,
-            shadow_offset: 6.0,
+            position: ObjectPosition {
+                x: position.get_x(),
+                y: position.get_y(),
+                x_alignment: None,
+                y_alignment: None,
+            },
+            dimension: ObjectDimension {
+                width: text_dimensions.width,
+                height: text_dimensions.height,
+            },
+            parent: ParentState {
+                x: 0.0,
+                y: 0.0,
+                height: 0.0,
+                width: 0.0,
+            },
+            attribute: ButtonAttribute {
+                outline_thickness: config.outline,
+                outline_color: config.outline_color,
+                background_color: config.background_color,
+                corner_radius: config.radius,
+                text_color: config.text_color,
+                on_click_event: None,
+                is_clicked: false,
+                is_hovered: false,
+                is_pressed: false,
+                shadow_offset: 12.0,
+                text_size: config.text_size,
+                font: config.font,
+            },
             text: config.text.to_uppercase(),
-            text_size: config.text_size,
-            font: config.font,
-            x_alignment: None,
-            y_alignment: None,
-            parent_x: 0.0,
-            parent_y: 0.0,
-            background_color: config.background_color,
-            radius: config.radius,
-            text_color: config.text_color,
-            on_click_event: None,
-            is_clicked: false,
-            is_hovered: false,
-            is_pressed: false,
         }
     }
 
@@ -266,7 +223,7 @@ impl Button for RegularButton {
     where
         F: Fn() -> Option<usize> + 'static,
     {
-        self.on_click_event = Some(Box::new(callback));
+        self.attribute.on_click_event = Some(Box::new(callback));
         return self;
     }
 }
