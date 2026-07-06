@@ -33,7 +33,7 @@ impl Room {
 impl Page for Room {
     fn update(&mut self) -> Option<usize> {
         for i in &mut self.objects {
-            if let Some(n) = i.update() {
+            if let Some(n) = i.update(None, None, None, None) {
                 return Some(n);
             }
         }

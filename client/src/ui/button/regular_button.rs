@@ -20,6 +20,8 @@ pub struct RegularButton {
     background_color: Gradient,
     radius: f32,
     text_color: Color,
+    parent_x: f32,
+    parent_y: f32,
     is_center_x: bool,
     is_center_y: bool,
     on_click_event: Option<Box<dyn Fn() -> Option<usize> + 'static>>,
@@ -67,10 +69,24 @@ impl RegularButton {
 }
 
 impl Object for RegularButton {
-    fn update(&mut self) -> Option<usize> {
+    fn update(
+        &mut self,
+        parent_x: Option<f32>,
+        parent_y: Option<f32>,
+        parent_w: Option<f32>,
+        parent_h: Option<f32>,
+    ) -> Option<usize> {
+        if let Some(value) = parent_x {
+            self.parent_x = value;
+        }
+
+        if let Some(value) = parent_y {
+            self.parent_y = value;
+        }
+
         let (mouse_x, mouse_y) = mouse_position();
-        let btn_x = self.x;
-        let btn_y = self.y;
+        let btn_x = self.x + self.parent_x;
+        let btn_y = self.y + self.parent_y;
         let btn_w = self.width;
         let btn_h = self.height;
         let is_hovered = mouse_x >= btn_x
@@ -86,11 +102,21 @@ impl Object for RegularButton {
         self.is_clicked = is_clicked;
 
         if self.is_center_x {
-            self.x = screen_width() / 2.0 - self.width / 2.0;
+            let parent_x_a = if let Some(value) = parent_w {
+                value
+            } else {
+                screen_width()
+            };
+            self.x = parent_x_a / 2.0 - self.width / 2.0;
         }
 
         if self.is_center_y {
-            self.y = screen_height() / 2.0 - self.height / 2.0;
+            let parent_y_a = if let Some(value) = parent_h {
+                value
+            } else {
+                screen_height()
+            };
+            self.y = parent_y_a / 2.0 - self.height / 2.0;
         }
 
         if let Some(event) = &self.on_click_event {
@@ -109,18 +135,18 @@ impl Object for RegularButton {
     fn draw(&self) {
         let (draw_x, draw_y, current_shadow) = if self.is_pressed {
             (
-                self.x + self.shadow_offset,
-                self.y + self.shadow_offset,
+                (self.x + self.parent_x) + self.shadow_offset,
+                (self.y + self.parent_y) + self.shadow_offset,
                 0.0,
             )
         } else {
-            (self.x, self.y, self.shadow_offset)
+            (self.x + self.parent_x, self.y + self.parent_y, self.shadow_offset)
         };
 
         if current_shadow > 0.0 {
             draw_rectangle(
-                self.x + self.shadow_offset,
-                self.y + self.shadow_offset,
+                (self.x + self.parent_x) + self.shadow_offset,
+                (self.y + self.parent_y) + self.shadow_offset,
                 self.width,
                 self.height,
                 Color::new(0.1, 0.1, 0.1, 0.25),
@@ -188,6 +214,8 @@ impl Button for RegularButton {
             font: config.font,
             is_center_x: false,
             is_center_y: false,
+            parent_x: 0.0,
+            parent_y: 0.0,
             background_color: config.background_color,
             radius: config.radius,
             text_color: config.text_color,

@@ -1,5 +1,5 @@
+use crate::ui::{config::position::PositionConfig, font::Nunito, gradient::Gradient};
 use macroquad::prelude::*;
-use crate::ui::{config::{dimension::DimensionConfig, position::PositionConfig}, font::Nunito, gradient::Gradient};
 pub mod regular_button;
 
 pub trait Button {
@@ -23,7 +23,14 @@ pub struct ButtonConfig {
 }
 
 impl ButtonConfig {
-    pub fn new(text: &str, text_size: f32, bg_color: Gradient, radius: f32, text_color: Color, font: Font) -> ButtonConfig {
+    pub fn new(
+        text: &str,
+        text_size: f32,
+        bg_color: Gradient,
+        radius: f32,
+        text_color: Color,
+        font: Font,
+    ) -> ButtonConfig {
         ButtonConfig {
             text: String::from(text),
             text_size,
@@ -39,7 +46,10 @@ impl ButtonConfig {
             text: String::from(text),
             text_size: 24.0,
             font: Nunito::regular(),
-            background_color: Gradient::new(45.0, vec![Color::from_hex(0xfca503), Color::from_hex(0xfc6203)]),
+            background_color: Gradient::new(
+                45.0,
+                vec![Color::from_hex(0xfca503), Color::from_hex(0xfc6203)],
+            ),
             radius: 10.0,
             text_color: Color::new(1.0, 1.0, 1.0, 1.0),
         }

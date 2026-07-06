@@ -1,10 +1,17 @@
 pub mod button;
 pub mod config;
-pub mod font;
+pub mod container;
 pub mod draw;
+pub mod font;
 pub mod gradient;
 
 pub trait Object {
-    fn update(&mut self) -> Option<usize>;
+    fn update(
+        &mut self,
+        parent_x: Option<f32>,
+        parent_y: Option<f32>,
+        parent_w: Option<f32>,
+        parent_h: Option<f32>,
+    ) -> Option<usize>;
     fn draw(&self) {}
 }

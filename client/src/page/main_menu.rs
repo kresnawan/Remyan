@@ -1,4 +1,4 @@
-use macroquad::{color, prelude::*};
+use macroquad::prelude::*;
 
 use crate::{
     PageIndex,
@@ -7,7 +7,7 @@ use crate::{
         Object,
         button::{Button, ButtonConfig, regular_button::RegularButton},
         config::position::Position,
-        font::Nunito,
+        container::Container,
     },
 };
 
@@ -25,9 +25,7 @@ impl MainMenu {
                     return None;
                 })
                 .set_padding(0.0, 50.0)
-                .set_dimensions(screen_width() / 2.0, 0.0)
-                .to_center_x();
-
+                .set_dimensions(screen_width() / 2.0, 0.0);
         let join_room_btn = RegularButton::new(
             Position::new(0.0, 200.0),
             ButtonConfig::default("Masuk Room"),
@@ -37,9 +35,7 @@ impl MainMenu {
             return Some(PageIndex::Room as usize);
         })
         .set_padding(0.0, 50.0)
-        .set_dimensions(screen_width() / 2.0, 0.0)
-        .to_center_x();
-
+        .set_dimensions(screen_width() / 2.0, 0.0);
         let settings_btn = RegularButton::new(
             Position::new(0.0, 200.0 * 2.0),
             ButtonConfig::default("Pengaturan"),
@@ -49,16 +45,18 @@ impl MainMenu {
             return Some(PageIndex::Room as usize);
         })
         .set_padding(0.0, 50.0)
-        .set_dimensions(screen_width() / 2.0, 0.0)
-        .to_center_x();
+        .set_dimensions(screen_width() / 2.0, 0.0);
+
+        let div = Container::new(0.0, 100.0, screen_width(), screen_height(), true, true)
+            .add_child(Box::new(create_room_btn))
+            .add_child(Box::new(join_room_btn))
+            .add_child(Box::new(settings_btn));
+
+        let div_2 = Container::new(0.0, 100.0, 700.0, 300.0, false, false).add_child(Box::new(div));
 
         return MainMenu {
             player_name: String::from(player_name),
-            objects: vec![
-                Box::new(create_room_btn),
-                Box::new(join_room_btn),
-                Box::new(settings_btn),
-            ],
+            objects: vec![Box::new(div_2)],
         };
     }
 }
@@ -66,7 +64,7 @@ impl MainMenu {
 impl Page for MainMenu {
     fn update(&mut self) -> Option<usize> {
         for item in &mut self.objects {
-            if let Some(n) = item.update() {
+            if let Some(n) = item.update(None, None, None, None) {
                 return Some(n);
             }
         }
