@@ -11,7 +11,10 @@ use crate::{
         Object, XAlignment, YAlignment,
         button::{Button, ButtonConfig, regular_button::RegularButton},
         config::{
-            dimension::{DynamicLength::Full, ObjectDimension},
+            dimension::{
+                DynamicLength::{Custom, Full},
+                ObjectDimension,
+            },
             position::{ObjectPosition, Position},
         },
         container::Container,
@@ -45,11 +48,9 @@ impl Room {
                 x_alignment: Some(XAlignment::Center),
                 y_alignment: Some(YAlignment::Center),
             },
-            ObjectDimension::new(
-                screen_width() - 70.0 * 2.0,
-                screen_height() - 70.0 * 2.0,
-                None,
-                None,
+            ObjectDimension::dynamic(
+                Custom(|_, _, p_width, _| p_width - 70.5 * 2.0),
+                Custom(|_, _, _, p_height| p_height - 70.5 * 2.0),
             ),
             ParentState::new(),
             RectangleConfig {

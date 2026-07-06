@@ -47,6 +47,10 @@ pub trait Object {
                 DynamicLength::Percent(value) => {
                     current_dimension.width = (value / 100.0) * parent_state.width;
                 }
+                DynamicLength::Custom(value) => {
+                    let res = value(parent_state.x, parent_state.y, parent_state.width, parent_state.height);
+                    current_dimension.width = res;
+                }
             }
         }
 
@@ -57,6 +61,10 @@ pub trait Object {
                 }
                 DynamicLength::Percent(value) => {
                     current_dimension.height = (value / 100.0) * parent_state.height;
+                }
+                DynamicLength::Custom(value) => {
+                    let res = value(parent_state.x, parent_state.y, parent_state.width, parent_state.height);
+                    current_dimension.height = res;
                 }
             }
         }

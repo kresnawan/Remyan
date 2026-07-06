@@ -23,5 +23,6 @@ impl ObjectDimension {
 #[derive(Clone)]
 pub enum DynamicLength {
     Full,
-    Percent(f32)
+    Percent(f32),
+    Custom(fn(f32, f32, f32, f32) -> f32)
 }

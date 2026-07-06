@@ -61,6 +61,7 @@ impl Object for Rectangle {
         parent_h: Option<f32>,
     ) -> Option<usize> {
         self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
+        self.update_dimension();
         self.update_alignment();
 
         return None;
