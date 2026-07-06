@@ -1,8 +1,14 @@
 use macroquad::prelude::*;
 
 use crate::{
-    PageIndex, page::Page, ui::{
-        Object, XAlignment, button::{Button, ButtonConfig, regular_button::RegularButton}, config::position::Position, container::Container,
+    PageIndex,
+    page::Page,
+    ui::{
+        Object, XAlignment, YAlignment,
+        button::{Button, ButtonConfig, regular_button::RegularButton},
+        config::position::Position,
+        container::Container,
+        draw::draw_rectangle_extended,
     },
 };
 
@@ -22,9 +28,9 @@ impl MainMenu {
                 .set_padding(0.0, 50.0)
                 .set_dimensions(screen_width() / 2.0, 0.0)
                 .set_alignment(Some(XAlignment::Center), None);
-        
+
         let join_room_btn = RegularButton::new(
-            Position::new(0.0, 200.0),
+            Position::new(0.0, 150.0),
             ButtonConfig::default("Masuk Room"),
         )
         .on_click(|| {
@@ -34,9 +40,9 @@ impl MainMenu {
         .set_padding(0.0, 50.0)
         .set_dimensions(screen_width() / 2.0, 0.0)
         .set_alignment(Some(XAlignment::Center), None);
-        
+
         let settings_btn = RegularButton::new(
-            Position::new(0.0, 200.0 * 2.0),
+            Position::new(0.0, 150.0 * 2.0),
             ButtonConfig::default("Pengaturan"),
         )
         .on_click(|| {
@@ -47,7 +53,7 @@ impl MainMenu {
         .set_dimensions(screen_width() / 2.0, 0.0)
         .set_alignment(Some(XAlignment::Center), None);
 
-        let div = Container::new(0.0, 100.0, 500.0, screen_height(), true, true)
+        let div = Container::new(0.0, 500.0, || screen_width(), || screen_height())
             .add_child(Box::new(create_room_btn))
             .add_child(Box::new(join_room_btn))
             .add_child(Box::new(settings_btn));
@@ -70,7 +76,18 @@ impl Page for MainMenu {
         return None;
     }
     fn draw(&self) {
-        clear_background(RED);
+        clear_background(BLACK);
+        draw_rectangle_extended(
+            0.0,
+            0.0,
+            screen_width(),
+            screen_height(),
+            0.0,
+            Color::from_hex(0x7d0202),
+            Color::from_hex(0x2b0000),
+            
+            30.0,
+        );
         for item in &self.objects {
             item.draw();
         }

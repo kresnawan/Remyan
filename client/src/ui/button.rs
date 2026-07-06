@@ -44,14 +44,14 @@ impl ButtonConfig {
     pub fn default(text: &str) -> ButtonConfig {
         ButtonConfig {
             text: String::from(text),
-            text_size: 24.0,
-            font: Nunito::regular(),
+            text_size: 36.0,
+            font: Nunito::black(),
             background_color: Gradient::new(
                 90.0,
                 vec![Color::from_hex(0xfca503), Color::from_hex(0xfc6203)],
             ),
             radius: 10.0,
-            text_color: Color::new(1.0, 1.0, 1.0, 1.0),
+            text_color: Color::from_hex(0x2b0000),
         }
     }
 }

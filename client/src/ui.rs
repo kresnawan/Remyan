@@ -19,11 +19,11 @@ pub trait Object {
 pub enum XAlignment {
     Left,
     Center,
-    Right
+    Right,
 }
 
 pub enum YAlignment {
     Top,
     Center,
-    Bottom
+    Bottom,
 }

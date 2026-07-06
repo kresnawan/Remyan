@@ -1,49 +1,48 @@
-use macroquad::window::{screen_height, screen_width};
+use macroquad::{
+    input::KeyCode::F,
+    window::{screen_height, screen_width},
+};
 
 use crate::ui::Object;
 
-pub struct Container {
+pub struct Container<F, G> {
     x: f32,
     y: f32,
-    width: f32,
-    height: f32,
+    width: F,
+    height: G,
     parent_x: f32,
     parent_y: f32,
-    match_screen_width: bool,
-    match_screen_height: bool,
     objects: Vec<Box<dyn Object>>,
 }
 
-impl Container {
-    pub fn new(
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
-        match_screen_width: bool,
-        match_screen_height: bool,
-    ) -> Container {
+impl<F, G> Container<F, G>
+where
+    F: Fn() -> f32,
+    G: Fn() -> f32,
+{
+    pub fn new(x: f32, y: f32, width: F, height: G) -> Container<F, G> {
         return Self {
             x,
             y,
-            width: w,
-            height: h,
+            width: width,
+            height: height,
             parent_x: 0.0,
             parent_y: 0.0,
-            match_screen_width,
-            match_screen_height,
             objects: Vec::new(),
         };
     }
 
-    pub fn add_child(mut self, object: Box<dyn Object>) -> Container {
+    pub fn add_child(mut self, object: Box<dyn Object>) -> Container<F, G> {
         self.objects.push(object);
         self
     }
-
 }
 
-impl Object for Container {
+impl<F, G> Object for Container<F, G>
+where
+    F: Fn() -> f32,
+    G: Fn() -> f32
+{
     fn update(
         &mut self,
         parent_x: Option<f32>,
@@ -51,13 +50,11 @@ impl Object for Container {
         _: Option<f32>,
         _: Option<f32>,
     ) -> Option<usize> {
-        if self.match_screen_width {
-            self.width = screen_width();
-        }
+        let width_attr = &self.width;
+        let height_attr = &self.height;
 
-        if self.match_screen_height {
-            self.height = screen_height();
-        }
+        let width = width_attr();
+        let height = height_attr();
 
         if let Some(value) = parent_x {
             self.parent_x = value;
@@ -69,8 +66,8 @@ impl Object for Container {
             if let Some(n) = i.update(
                 Some(self.x + self.parent_x),
                 Some(self.y + self.parent_y),
-                Some(self.width),
-                Some(self.height),
+                Some(width),
+                Some(height),
             ) {
                 return Some(n);
             }

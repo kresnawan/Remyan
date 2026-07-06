@@ -146,7 +146,7 @@ impl Object for RegularButton {
                         screen_height()
                     };
 
-                    self.x = parent_h_a - self.height;
+                    self.y = parent_h_a - self.height;
                 }
             }
         }
@@ -245,7 +245,7 @@ impl Button for RegularButton {
             width: text_dimensions.width,
             height: text_dimensions.height,
             shadow_offset: 6.0,
-            text: config.text,
+            text: config.text.to_uppercase(),
             text_size: config.text_size,
             font: config.font,
             x_alignment: None,
