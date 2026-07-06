@@ -15,3 +15,15 @@ pub trait Object {
     ) -> Option<usize>;
     fn draw(&self) {}
 }
+
+pub enum XAlignment {
+    Left,
+    Center,
+    Right
+}
+
+pub enum YAlignment {
+    Top,
+    Center,
+    Bottom
+}

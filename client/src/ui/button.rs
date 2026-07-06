@@ -47,7 +47,7 @@ impl ButtonConfig {
             text_size: 24.0,
             font: Nunito::regular(),
             background_color: Gradient::new(
-                45.0,
+                90.0,
                 vec![Color::from_hex(0xfca503), Color::from_hex(0xfc6203)],
             ),
             radius: 10.0,

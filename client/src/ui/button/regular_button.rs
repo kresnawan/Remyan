@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 
 use crate::ui::{
-    Object,
+    Object, XAlignment, YAlignment,
     button::{Button, ButtonConfig},
     config::position::PositionConfig,
     draw::draw_rectangle_extended,
@@ -22,8 +22,8 @@ pub struct RegularButton {
     text_color: Color,
     parent_x: f32,
     parent_y: f32,
-    is_center_x: bool,
-    is_center_y: bool,
+    x_alignment: Option<XAlignment>,
+    y_alignment: Option<YAlignment>,
     on_click_event: Option<Box<dyn Fn() -> Option<usize> + 'static>>,
     is_pressed: bool,
     is_hovered: bool,
@@ -37,21 +37,9 @@ impl RegularButton {
         return self;
     }
 
-    pub fn to_center(mut self) -> Self {
-        self.is_center_x = true;
-        self.is_center_y = true;
-
-        return self;
-    }
-
-    pub fn to_center_x(mut self) -> Self {
-        self.is_center_x = true;
-
-        return self;
-    }
-
-    pub fn to_center_y(mut self) -> Self {
-        self.is_center_y = true;
+    pub fn set_alignment(mut self, x: Option<XAlignment>, y: Option<YAlignment>) -> Self {
+        self.x_alignment = x;
+        self.y_alignment = y;
 
         return self;
     }
@@ -101,22 +89,66 @@ impl Object for RegularButton {
         self.is_pressed = is_pressed;
         self.is_clicked = is_clicked;
 
-        if self.is_center_x {
-            let parent_x_a = if let Some(value) = parent_w {
-                value
-            } else {
-                screen_width()
-            };
-            self.x = parent_x_a / 2.0 - self.width / 2.0;
+        if let Some(value) = &self.x_alignment {
+            match value {
+                XAlignment::Left => {
+                    let parent_x_a = if let Some(value) = parent_x {
+                        value
+                    } else {
+                        0.0
+                    };
+
+                    self.x = parent_x_a;
+                }
+                XAlignment::Center => {
+                    let parent_w_a = if let Some(value) = parent_w {
+                        value
+                    } else {
+                        screen_width()
+                    };
+                    self.x = parent_w_a / 2.0 - self.width / 2.0;
+                }
+                XAlignment::Right => {
+                    let parent_w_a = if let Some(value) = parent_w {
+                        value
+                    } else {
+                        screen_width()
+                    };
+
+                    self.x = parent_w_a - self.width;
+                }
+            }
         }
 
-        if self.is_center_y {
-            let parent_y_a = if let Some(value) = parent_h {
-                value
-            } else {
-                screen_height()
-            };
-            self.y = parent_y_a / 2.0 - self.height / 2.0;
+        if let Some(value) = &self.y_alignment {
+            match value {
+                YAlignment::Top => {
+                    let parent_y_a = if let Some(value) = parent_x {
+                        value
+                    } else {
+                        0.0
+                    };
+
+                    self.y = parent_y_a;
+                }
+                YAlignment::Center => {
+                    let parent_h_a = if let Some(value) = parent_h {
+                        value
+                    } else {
+                        screen_height()
+                    };
+                    self.y = parent_h_a / 2.0 - self.height / 2.0;
+                }
+                YAlignment::Bottom => {
+                    let parent_h_a = if let Some(value) = parent_h {
+                        value
+                    } else {
+                        screen_height()
+                    };
+
+                    self.x = parent_h_a - self.height;
+                }
+            }
         }
 
         if let Some(event) = &self.on_click_event {
@@ -140,7 +172,11 @@ impl Object for RegularButton {
                 0.0,
             )
         } else {
-            (self.x + self.parent_x, self.y + self.parent_y, self.shadow_offset)
+            (
+                self.x + self.parent_x,
+                self.y + self.parent_y,
+                self.shadow_offset,
+            )
         };
 
         if current_shadow > 0.0 {
@@ -212,8 +248,8 @@ impl Button for RegularButton {
             text: config.text,
             text_size: config.text_size,
             font: config.font,
-            is_center_x: false,
-            is_center_y: false,
+            x_alignment: None,
+            y_alignment: None,
             parent_x: 0.0,
             parent_y: 0.0,
             background_color: config.background_color,
