@@ -33,3 +33,17 @@ pub struct ObjectPosition {
     pub x_alignment: Option<XAlignment>,
     pub y_alignment: Option<YAlignment>,
 }
+
+impl ObjectPosition {
+    pub fn new(x: f32, y: f32, x_alignment: Option<XAlignment>, y_alignment: Option<YAlignment>) -> ObjectPosition {
+        ObjectPosition { x, y, x_alignment, y_alignment }
+    }
+    
+    pub fn absolute(x: f32, y: f32) -> Self {
+        ObjectPosition { x, y, x_alignment: None, y_alignment: None }
+    }
+
+    pub fn dynamic(x_alignment: XAlignment, y_alignment: YAlignment) -> Self {
+        ObjectPosition { x: 0.0, y: 0.0, x_alignment: Some(x_alignment), y_alignment: Some(y_alignment) }
+    }
+}

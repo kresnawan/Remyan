@@ -10,37 +10,20 @@ pub struct Container {
     position: ObjectPosition,
     dimension: ObjectDimension,
     parent: ParentState,
-    objects: Vec<Box<dyn Object>>,
-    match_screen_width: bool,
-    match_screen_height: bool,
+    objects: Vec<Box<dyn Object>>
 }
 
 impl Container {
     pub fn new(
-        x: f32,
-        y: f32,
-        width: f32,
-        height: f32,
-        match_screen_width: bool,
-        match_screen_height: bool,
+        position: ObjectPosition,
+        dimension: ObjectDimension,
+        parent: ParentState
     ) -> Container {
         return Container {
-            position: ObjectPosition {
-                x,
-                y,
-                x_alignment: None,
-                y_alignment: None,
-            },
-            dimension: ObjectDimension { width, height },
-            parent: ParentState {
-                x: 0.0,
-                y: 0.0,
-                height: 0.0,
-                width: 0.0,
-            },
+            position,
+            dimension,
             objects: Vec::new(),
-            match_screen_height,
-            match_screen_width,
+            parent
         };
     }
 
@@ -58,15 +41,9 @@ impl Object for Container {
         parent_w: Option<f32>,
         parent_h: Option<f32>,
     ) -> Option<usize> {
-        if self.match_screen_width {
-            self.dimension.width = screen_width();
-        }
-
-        if self.match_screen_height {
-            self.dimension.height = screen_height();
-        }
-
-        self.update_alignment(parent_x, parent_y, parent_w, parent_h);
+        self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
+        self.update_dimension();
+        self.update_alignment();
 
         for i in &mut self.objects {
             if let Some(n) = i.update(

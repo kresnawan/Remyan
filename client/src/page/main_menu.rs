@@ -1,14 +1,10 @@
 use macroquad::prelude::*;
 
 use crate::{
-    PageIndex,
-    page::Page,
-    ui::{
-        Object, XAlignment, YAlignment,
-        button::{Button, ButtonConfig, regular_button::RegularButton},
-        config::position::Position,
-        container::Container,
-        draw::draw_rectangle_extended,
+    PageIndex, page::Page, ui::{
+        Object, XAlignment, YAlignment, button::{Button, ButtonConfig, regular_button::RegularButton}, config::{
+            dimension::{DynamicLength::{self, Full}, ObjectDimension}, position::{ObjectPosition, Position},
+        }, container::Container, draw::draw_rectangle_extended, parent::ParentState,
     },
 };
 
@@ -53,10 +49,14 @@ impl MainMenu {
         .set_dimensions(screen_width() / 2.0, 0.0)
         .set_alignment(Some(XAlignment::Center), None);
 
-        let div = Container::new(0.0, 500.0, 0.0, 0.0, true, true)
-            .add_child(Box::new(create_room_btn))
-            .add_child(Box::new(join_room_btn))
-            .add_child(Box::new(settings_btn));
+        let div = Container::new(
+            ObjectPosition::absolute(0.0, 500.0),
+            ObjectDimension::dynamic(Full, Full),
+            ParentState::new(),
+        )
+        .add_child(Box::new(create_room_btn))
+        .add_child(Box::new(join_room_btn))
+        .add_child(Box::new(settings_btn));
 
         return MainMenu {
             player_name: String::from(player_name),
@@ -85,10 +85,9 @@ impl Page for MainMenu {
             0.0,
             Color::from_hex(0x7d0202),
             Color::from_hex(0x2b0000),
-            
             30.0,
             0.0,
-            BLACK
+            BLACK,
         );
         for item in &self.objects {
             item.draw();

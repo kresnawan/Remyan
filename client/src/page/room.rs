@@ -8,10 +8,17 @@ use crate::{
     PageIndex,
     page::Page,
     ui::{
-        Object,
+        Object, XAlignment, YAlignment,
         button::{Button, ButtonConfig, regular_button::RegularButton},
-        config::position::Position,
+        config::{
+            dimension::{DynamicLength::Full, ObjectDimension},
+            position::{ObjectPosition, Position},
+        },
+        container::Container,
         draw::draw_rectangle_extended,
+        gradient::Gradient,
+        parent::ParentState,
+        rectangle::{Rectangle, RectangleConfig},
     },
 };
 
@@ -23,14 +30,49 @@ pub struct Room {
 impl Room {
     pub fn new() -> Self {
         let btn = Box::new(
-            RegularButton::new(Position::new(0.0, 0.0), ButtonConfig::default("Room"))
-                .on_click(|| return Some(PageIndex::MainMenu as usize))
-                .set_padding(100.0, 50.0),
+            RegularButton::new(
+                Position::new(0.0, 0.0),
+                ButtonConfig::default("Kembali ke Menu Utama"),
+            )
+            .on_click(|| return Some(PageIndex::MainMenu as usize))
+            .set_padding(100.0, 50.0),
         );
+
+        let rectang = Rectangle::new(
+            ObjectPosition {
+                x: 0.0,
+                y: 0.0,
+                x_alignment: Some(XAlignment::Center),
+                y_alignment: Some(YAlignment::Center),
+            },
+            ObjectDimension::new(
+                screen_width() - 70.0 * 2.0,
+                screen_height() - 70.0 * 2.0,
+                None,
+                None,
+            ),
+            ParentState::new(),
+            RectangleConfig {
+                corner_radius: 10.0,
+                color: Gradient {
+                    colors: vec![Color::from_rgba(0, 0, 0, 75)],
+                    angle: 0.0,
+                },
+                outline: 0.0,
+                outline_color: BLACK,
+            },
+        );
+
+        let wrapper = Container::new(
+            ObjectPosition::absolute(0.0, 0.0),
+            ObjectDimension::dynamic(Full, Full),
+            ParentState::new(),
+        )
+        .add_child(Box::new(rectang));
 
         Self {
             players: Vec::new(),
-            objects: vec![btn],
+            objects: vec![Box::new(wrapper), btn],
         }
     }
 }

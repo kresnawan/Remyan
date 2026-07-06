@@ -46,7 +46,9 @@ impl Object for RegularButton {
         parent_w: Option<f32>,
         parent_h: Option<f32>,
     ) -> Option<usize> {
-        self.update_alignment(parent_x, parent_y, parent_w, parent_h);
+        self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
+        self.update_dimension();
+        self.update_alignment();
 
         let (mouse_x, mouse_y) = mouse_position();
         let btn_x = self.position.x + self.parent.x;
@@ -194,6 +196,8 @@ impl Button for RegularButton {
             dimension: ObjectDimension {
                 width: text_dimensions.width,
                 height: text_dimensions.height,
+                width_dyn: None,
+                height_dyn: None
             },
             parent: ParentState {
                 x: 0.0,
