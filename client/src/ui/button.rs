@@ -1,11 +1,14 @@
-use crate::ui::{config::position::PositionConfig, font::Nunito, gradient::Gradient};
+use crate::ui::{
+    config::position::{ObjectPosition, PositionConfig},
+    font::Nunito,
+    gradient::Gradient,
+};
 use macroquad::prelude::*;
 pub mod regular_button;
 
 pub trait Button {
-    fn new<T>(position: T, config: ButtonConfig) -> Self
+    fn new(position: ObjectPosition, config: ButtonConfig) -> Self
     where
-        T: PositionConfig,
         Self: Sized;
 
     fn on_click<F>(self, callback: F) -> Self
@@ -60,6 +63,14 @@ impl ButtonConfig {
             outline_color: WHITE,
             radius: 10.0,
             text_color: Color::from_hex(0x2b0000),
+        }
+    }
+
+    pub fn default_with_color(text: &str, color: Gradient) -> ButtonConfig {
+        ButtonConfig {
+            text: String::from(text),
+            background_color: color,
+            ..ButtonConfig::default(text)
         }
     }
 }

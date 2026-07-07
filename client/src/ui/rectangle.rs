@@ -15,6 +15,12 @@ pub struct RectangleConfig {
     pub outline_color: Color,
 }
 
+impl RectangleConfig {
+    pub fn new(corner_radius: f32, color: Gradient, outline: f32, outline_color: Color) -> Self {
+        RectangleConfig { corner_radius, color, outline, outline_color }
+    }
+}
+
 pub struct Rectangle {
     pub position: ObjectPosition,
     pub dimension: ObjectDimension,

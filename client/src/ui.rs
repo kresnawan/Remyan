@@ -12,6 +12,8 @@ pub mod font;
 pub mod gradient;
 pub mod parent;
 pub mod rectangle;
+pub mod player_slot;
+pub mod plus;
 
 pub trait Object {
     fn update(
@@ -97,10 +99,14 @@ pub trait Object {
 
         if let Some(value) = parent_x {
             parent_state_temp.x = value;
+        } else {
+            parent_state_temp.x = 0.0;
         }
 
         if let Some(value) = parent_y {
             parent_state_temp.y = value;
+        } else {
+            parent_state_temp.y = 0.0;
         }
 
         if let Some(value) = parent_w {
@@ -126,7 +132,7 @@ pub trait Object {
         if let Some(value) = &position_temp.x_alignment {
             match value {
                 XAlignment::Left => {
-                    position_temp.x = parent_state_temp.x;
+                    position_temp.x = 0.0;
                 }
                 XAlignment::Center => {
                     position_temp.x = parent_state_temp.width / 2.0 - dimension_temp.width / 2.0;
@@ -140,7 +146,7 @@ pub trait Object {
         if let Some(value) = &position_temp.y_alignment {
             match value {
                 YAlignment::Top => {
-                    position_temp.y = parent_state_temp.y;
+                    position_temp.y = 0.0;
                 }
                 YAlignment::Center => {
                     position_temp.y = parent_state_temp.height / 2.0 - dimension_temp.height / 2.0;
@@ -168,3 +174,8 @@ pub enum YAlignment {
     Center,
     Bottom,
 }
+
+pub const HEADING_1: f32 = 48.0;
+pub const HEADING_2: f32 = 36.0;
+pub const HEADING_3: f32 = 24.0;
+pub const HEADING_4: f32 = 12.0;

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 #[derive(Clone)]
 pub struct ObjectDimension {
     pub width: f32,
@@ -24,5 +26,6 @@ impl ObjectDimension {
 pub enum DynamicLength {
     Full,
     Percent(f32),
-    Custom(fn(f32, f32, f32, f32) -> f32)
+    // Custom(fn(f32, f32, f32, f32) -> f32)
+    Custom(Arc<dyn Fn(f32, f32, f32, f32) -> f32>)
 }

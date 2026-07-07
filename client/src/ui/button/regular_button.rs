@@ -5,7 +5,7 @@ use crate::ui::{
     button::{Button, ButtonAttribute, ButtonConfig},
     config::{
         dimension::ObjectDimension,
-        position::{ObjectPosition, PositionConfig},
+        position::{ObjectPosition},
     },
     draw::draw_rectangle_extended,
     parent::ParentState,
@@ -179,20 +179,14 @@ impl Object for RegularButton {
 }
 
 impl Button for RegularButton {
-    fn new<T>(position: T, config: ButtonConfig) -> Self
+    fn new(position: ObjectPosition, config: ButtonConfig) -> Self
     where
-        T: PositionConfig,
         Self: Sized + Object,
     {
         let text_dimensions = measure_text(&config.text, None, config.text_size as u16, 1.0);
 
         RegularButton {
-            position: ObjectPosition {
-                x: position.get_x(),
-                y: position.get_y(),
-                x_alignment: None,
-                y_alignment: None,
-            },
+            position,
             dimension: ObjectDimension {
                 width: text_dimensions.width,
                 height: text_dimensions.height,
@@ -222,6 +216,8 @@ impl Button for RegularButton {
             text: config.text.to_uppercase(),
         }
     }
+
+    
 
     fn on_click<F>(mut self, callback: F) -> Self
     where

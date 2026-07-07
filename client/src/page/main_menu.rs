@@ -16,7 +16,7 @@ pub struct MainMenu {
 impl MainMenu {
     pub fn new(player_name: &str) -> MainMenu {
         let create_room_btn =
-            RegularButton::new(Position::new(0.0, 0.0), ButtonConfig::default("Buat Room"))
+            RegularButton::new(ObjectPosition::absolute(0.0, 0.0), ButtonConfig::default("Buat Room"))
                 .on_click(|| {
                     println!("Terpencet");
                     return None;
@@ -26,7 +26,7 @@ impl MainMenu {
                 .set_alignment(Some(XAlignment::Center), None);
 
         let join_room_btn = RegularButton::new(
-            Position::new(0.0, 150.0),
+            ObjectPosition::absolute(0.0, 150.0),
             ButtonConfig::default("Masuk Room"),
         )
         .on_click(|| {
@@ -38,7 +38,7 @@ impl MainMenu {
         .set_alignment(Some(XAlignment::Center), None);
 
         let settings_btn = RegularButton::new(
-            Position::new(0.0, 150.0 * 2.0),
+            ObjectPosition::absolute(0.0, 150.0 * 2.0),
             ButtonConfig::default("Pengaturan"),
         )
         .on_click(|| {
@@ -53,6 +53,7 @@ impl MainMenu {
             ObjectPosition::absolute(0.0, 500.0),
             ObjectDimension::dynamic(Full, Full),
             ParentState::new(),
+            None,
         )
         .add_child(Box::new(create_room_btn))
         .add_child(Box::new(join_room_btn))
