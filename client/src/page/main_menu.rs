@@ -2,8 +2,8 @@ use macroquad::prelude::*;
 
 use crate::{
     PageIndex, page::Page, ui::{
-        Object, XAlignment, YAlignment, button::{Button, ButtonConfig, regular_button::RegularButton}, config::{
-            dimension::{DynamicLength::{self, Full}, ObjectDimension}, position::{ObjectPosition, Position},
+        Object, button::{Button, ButtonConfig, regular_button::RegularButton}, config::{
+            dimension::{DynamicDimension::{self, Full}, ObjectDimension}, position::{DynamicPosition, ObjectPosition, Position},
         }, container::Container, draw::draw_rectangle_extended, parent::ParentState,
     },
 };
@@ -23,7 +23,7 @@ impl MainMenu {
                 })
                 .set_padding(0.0, 50.0)
                 .set_dimensions(screen_width() / 2.0, 0.0)
-                .set_alignment(Some(XAlignment::Center), None);
+                .set_alignment(Some(DynamicPosition::Center), None);
 
         let join_room_btn = RegularButton::new(
             ObjectPosition::absolute(0.0, 150.0),
@@ -35,7 +35,7 @@ impl MainMenu {
         })
         .set_padding(0.0, 50.0)
         .set_dimensions(screen_width() / 2.0, 0.0)
-        .set_alignment(Some(XAlignment::Center), None);
+        .set_alignment(Some(DynamicPosition::Center), None);
 
         let settings_btn = RegularButton::new(
             ObjectPosition::absolute(0.0, 150.0 * 2.0),
@@ -47,7 +47,7 @@ impl MainMenu {
         })
         .set_padding(0.0, 50.0)
         .set_dimensions(screen_width() / 2.0, 0.0)
-        .set_alignment(Some(XAlignment::Center), None);
+        .set_alignment(Some(DynamicPosition::Center), None);
 
         let div = Container::new(
             ObjectPosition::absolute(0.0, 500.0),

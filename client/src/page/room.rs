@@ -8,10 +8,10 @@ use remyan_core::Player;
 
 use crate::{
     PageIndex, page::Page, ui::{
-        HEADING_2, HEADING_3, Object, XAlignment, YAlignment, button::{Button, ButtonConfig, regular_button::RegularButton}, config::{
+        HEADING_2, HEADING_3, Object, button::{Button, ButtonConfig, regular_button::RegularButton}, config::{
             dimension::{
-                DynamicLength::{self, Custom, Full, Percent}, ObjectDimension,
-            }, position::{ObjectPosition, Position},
+                DynamicDimension::{self, Custom, Full, Percent}, ObjectDimension,
+            }, position::{DynamicPosition, ObjectPosition, Position},
         }, container::Container, draw::draw_rectangle_extended, font::Nunito, gradient::Gradient, parent::ParentState, player_slot::PlayerSlot, plus::{Plus, PlusAttribute}, rectangle::{Rectangle, RectangleConfig},
     },
 };
@@ -24,14 +24,14 @@ pub struct Room {
 impl Room {
     pub fn new() -> Self {
         let start_game_btn = RegularButton::new(
-            ObjectPosition::dynamic(XAlignment::Center, YAlignment::Top),
+            ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Start),
             ButtonConfig::default("Mulai Game"),
         )
         .on_click(|| return Some(PageIndex::MainMenu as usize))
         .set_padding(100.0, 50.0);
 
         let room_config_btn = RegularButton::new(
-            ObjectPosition::dynamic(XAlignment::Left, YAlignment::Top),
+            ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::Start),
             ButtonConfig::new(
                 "Konfigurasi",
                 HEADING_3,
@@ -47,7 +47,7 @@ impl Room {
         .set_padding(75.0, 25.0);
 
         let left_room_btn = RegularButton::new(
-            ObjectPosition::dynamic(XAlignment::Right, YAlignment::Top),
+            ObjectPosition::dynamic(DynamicPosition::End, DynamicPosition::Start),
             ButtonConfig::new(
                 "Keluar",
                 HEADING_3,
@@ -63,7 +63,7 @@ impl Room {
         .set_padding(75.0, 25.0);
 
         let rectang = Rectangle::new(
-            ObjectPosition::dynamic(XAlignment::Center, YAlignment::Top),
+            ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Start),
             ObjectDimension::dynamic(Full, Full),
             ParentState::new(),
             RectangleConfig {
@@ -78,27 +78,27 @@ impl Room {
         );
 
         let player_slot_1 = PlayerSlot::new(
-            ObjectPosition::dynamic(XAlignment::Left, YAlignment::Bottom),
-            ObjectDimension::dynamic(DynamicLength::Percent(25.0), DynamicLength::Percent(80.0)),
+            ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::End),
+            ObjectDimension::dynamic(DynamicDimension::Percent(25.0), DynamicDimension::Percent(80.0)),
         );
 
         let player_slot_2 = PlayerSlot::new(
-            ObjectPosition::dynamic(XAlignment::Left, YAlignment::Bottom),
-            ObjectDimension::dynamic(DynamicLength::Percent(25.0), DynamicLength::Percent(80.0)),
+            ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::End),
+            ObjectDimension::dynamic(DynamicDimension::Percent(25.0), DynamicDimension::Percent(80.0)),
         );
 
         let player_slot_3 = PlayerSlot::new(
-            ObjectPosition::dynamic(XAlignment::Left, YAlignment::Bottom),
-            ObjectDimension::dynamic(DynamicLength::Percent(25.0), DynamicLength::Percent(80.0)),
+            ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::End),
+            ObjectDimension::dynamic(DynamicDimension::Percent(25.0), DynamicDimension::Percent(80.0)),
         );
 
         let player_slot_4 = PlayerSlot::new(
-            ObjectPosition::dynamic(XAlignment::Left, YAlignment::Bottom),
-            ObjectDimension::dynamic(DynamicLength::Percent(25.0), DynamicLength::Percent(80.0)),
+            ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::End),
+            ObjectDimension::dynamic(DynamicDimension::Percent(25.0), DynamicDimension::Percent(80.0)),
         );
 
         let wrapper_3_top = Container::new(
-            ObjectPosition::dynamic(XAlignment::Center, YAlignment::Top),
+            ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Start),
             ObjectDimension::dynamic(Full, Percent(80.0)),
             ParentState::new(),
             None,
@@ -106,7 +106,7 @@ impl Room {
         .add_child(Box::new(rectang));
 
         let wrapper_3_bottom = Container::new(
-            ObjectPosition::dynamic(XAlignment::Center, YAlignment::Bottom),
+            ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::End),
             ObjectDimension::dynamic(Full, Percent(15.0)),
             ParentState::new(),
             None,
@@ -116,7 +116,7 @@ impl Room {
         .add_child(Box::new(left_room_btn));
 
         let wrapper_2 = Container::new(
-            ObjectPosition::dynamic(XAlignment::Center, YAlignment::Center),
+            ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
             ObjectDimension::dynamic(
                 Custom(Arc::new(|_, _, p_width, _| p_width - 70.5 * 2.0)),
                 Custom(Arc::new(|_, _, _, p_height| p_height - 70.5 * 2.0)),

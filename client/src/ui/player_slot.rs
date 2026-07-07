@@ -1,12 +1,7 @@
 use macroquad::color::{BLANK, Color, WHITE};
 
 use crate::ui::{
-    Object, XAlignment, YAlignment,
-    config::{dimension::ObjectDimension, position::ObjectPosition},
-    gradient::Gradient,
-    parent::ParentState,
-    plus::{Plus, PlusAttribute},
-    rectangle::{Rectangle, RectangleConfig},
+    Object, config::{dimension::ObjectDimension, position::{DynamicPosition, ObjectPosition}}, gradient::Gradient, parent::ParentState, plus::{Plus, PlusAttribute}, rectangle::{Rectangle, RectangleConfig},
 };
 
 pub struct PlayerSlotState {
@@ -20,7 +15,7 @@ pub struct PlayerSlotState {
 impl PlayerSlotState {
     pub fn new() -> Self {
         let plus = Plus::new(
-            ObjectPosition::dynamic(XAlignment::Center, YAlignment::Center),
+            ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
             PlusAttribute::default(),
         );
         PlayerSlotState {

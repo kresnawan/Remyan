@@ -1,7 +1,7 @@
 use macroquad::window::{screen_height, screen_width};
 
 use crate::ui::{
-    config::{dimension::{DynamicLength, ObjectDimension}, position::ObjectPosition}, parent::ParentState,
+    config::{dimension::{DynamicDimension, ObjectDimension}, position::{DynamicPosition, ObjectPosition}}, parent::ParentState,
 };
 
 pub mod button;
@@ -43,13 +43,13 @@ pub trait Object {
 
         if let Some(n) = &current_dimension.width_dyn {
             match n {
-                DynamicLength::Full => {
+                DynamicDimension::Full => {
                     current_dimension.width = parent_state.width;
                 }
-                DynamicLength::Percent(value) => {
+                DynamicDimension::Percent(value) => {
                     current_dimension.width = (value / 100.0) * parent_state.width;
                 }
-                DynamicLength::Custom(value) => {
+                DynamicDimension::Custom(value) => {
                     let res = value(parent_state.x, parent_state.y, parent_state.width, parent_state.height);
                     current_dimension.width = res;
                 }
@@ -58,13 +58,13 @@ pub trait Object {
 
         if let Some(n) = &current_dimension.height_dyn {
             match n {
-                DynamicLength::Full => {
+                DynamicDimension::Full => {
                     current_dimension.height = parent_state.height;
                 }
-                DynamicLength::Percent(value) => {
+                DynamicDimension::Percent(value) => {
                     current_dimension.height = (value / 100.0) * parent_state.height;
                 }
-                DynamicLength::Custom(value) => {
+                DynamicDimension::Custom(value) => {
                     let res = value(parent_state.x, parent_state.y, parent_state.width, parent_state.height);
                     current_dimension.height = res;
                 }
@@ -74,14 +74,14 @@ pub trait Object {
         self.set_dimension(current_dimension);
     }
 
-    fn set_alignment(mut self, x: Option<XAlignment>, y: Option<YAlignment>) -> Self
+    fn set_alignment(mut self, x: Option<DynamicPosition>, y: Option<DynamicPosition>) -> Self
     where
         Self: Sized,
     {
         let position = self.get_position();
         self.set_position(ObjectPosition {
-            x_alignment: x,
-            y_alignment: y,
+            x_dyn: x,
+            y_dyn: y,
             ..position
         });
 
@@ -129,30 +129,36 @@ pub trait Object {
         let mut position_temp = self.get_position();
         let dimension_temp = self.get_dimension();
 
-        if let Some(value) = &position_temp.x_alignment {
+        if let Some(value) = &position_temp.x_dyn {
             match value {
-                XAlignment::Left => {
+                DynamicPosition::Start => {
                     position_temp.x = 0.0;
                 }
-                XAlignment::Center => {
+                DynamicPosition::Center => {
                     position_temp.x = parent_state_temp.width / 2.0 - dimension_temp.width / 2.0;
                 }
-                XAlignment::Right => {
+                DynamicPosition::End => {
                     position_temp.x = parent_state_temp.width - dimension_temp.width;
+                }
+                DynamicPosition::Custom(value) => {
+                    position_temp.x = value(parent_state_temp.x, parent_state_temp.y, parent_state_temp.width, parent_state_temp.height);
                 }
             }
         }
 
-        if let Some(value) = &position_temp.y_alignment {
+        if let Some(value) = &position_temp.y_dyn {
             match value {
-                YAlignment::Top => {
+                DynamicPosition::Start => {
                     position_temp.y = 0.0;
                 }
-                YAlignment::Center => {
+                DynamicPosition::Center => {
                     position_temp.y = parent_state_temp.height / 2.0 - dimension_temp.height / 2.0;
                 }
-                YAlignment::Bottom => {
+                DynamicPosition::End => {
                     position_temp.y = parent_state_temp.height - dimension_temp.height;
+                }
+                DynamicPosition::Custom(value) => {
+                    position_temp.y = value(parent_state_temp.x, parent_state_temp.y, parent_state_temp.width, parent_state_temp.height);
                 }
             }
         }
@@ -161,19 +167,7 @@ pub trait Object {
     }
 }
 
-#[derive(Clone)]
-pub enum XAlignment {
-    Left,
-    Center,
-    Right,
-}
 
-#[derive(Clone)]
-pub enum YAlignment {
-    Top,
-    Center,
-    Bottom,
-}
 
 pub const HEADING_1: f32 = 48.0;
 pub const HEADING_2: f32 = 36.0;

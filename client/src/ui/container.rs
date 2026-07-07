@@ -10,7 +10,7 @@ use crate::ui::{
     Object,
     config::{
         dimension::{
-            DynamicLength::{Custom, Percent},
+            DynamicDimension::{Custom, Percent},
             ObjectDimension,
         },
         position::ObjectPosition,
