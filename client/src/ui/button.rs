@@ -1,7 +1,5 @@
 use crate::ui::{
-    config::position::{ObjectPosition, PositionConfig},
-    font::Nunito,
-    gradient::Gradient,
+    State, config::position::{ObjectPosition, PositionConfig}, font::Nunito, gradient::Gradient,
 };
 use macroquad::prelude::*;
 pub mod regular_button;
@@ -13,7 +11,7 @@ pub trait Button {
 
     fn on_click<F>(self, callback: F) -> Self
     where
-        F: Fn() -> Option<usize> + 'static;
+        F: Fn() -> Option<State> + 'static;
 }
 
 pub struct ButtonConfig {
@@ -59,7 +57,7 @@ impl ButtonConfig {
                 90.0,
                 vec![Color::from_hex(0xfca503), Color::from_hex(0xfc6203)],
             ),
-            outline: 3.0,
+            outline: 0.0,
             outline_color: WHITE,
             radius: 10.0,
             text_color: Color::from_hex(0x2b0000),
@@ -81,7 +79,7 @@ pub struct ButtonAttribute {
     pub background_color: Gradient,
     pub corner_radius: f32,
     pub text_color: Color,
-    pub on_click_event: Option<Box<dyn Fn() -> Option<usize> + 'static>>,
+    pub on_click_event: Option<Box<dyn Fn() -> Option<State> + 'static>>,
     pub is_clicked: bool,
     pub is_hovered: bool,
     pub is_pressed: bool,

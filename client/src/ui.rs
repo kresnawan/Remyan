@@ -1,8 +1,10 @@
+use std::any::Any;
+
 use macroquad::window::{screen_height, screen_width};
 
-use crate::ui::{
+use crate::{Pages, ui::{
     config::{dimension::{DynamicDimension, ObjectDimension}, position::{DynamicPosition, ObjectPosition}}, parent::ParentState,
-};
+}};
 
 pub mod button;
 pub mod config;
@@ -14,6 +16,15 @@ pub mod parent;
 pub mod rectangle;
 pub mod player_slot;
 pub mod plus;
+pub mod text;
+pub mod dialogue_box;
+
+#[derive(Clone)]
+pub enum State {
+    MovePage(Pages),
+    OpenDialogueBox(u8),
+    CloseDialogueBox(u8)
+}
 
 pub trait Object {
     fn update(
@@ -22,20 +33,24 @@ pub trait Object {
         parent_y: Option<f32>,
         parent_w: Option<f32>,
         parent_h: Option<f32>,
-    ) -> Option<usize>;
+        state: &Option<State>
+    ) -> Option<State>;
     fn draw(&self);
+
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 
     // Position
     fn get_position(&self) -> ObjectPosition;
-    fn set_position(&mut self, value: ObjectPosition);
+    fn set_position_ref(&mut self, value: ObjectPosition);
 
     // Dimension
     fn get_dimension(&self) -> ObjectDimension;
-    fn set_dimension(&mut self, value: ObjectDimension);
+    fn set_dimension_ref(&mut self, value: ObjectDimension);
 
     // Parent
     fn get_parent_state(&self) -> ParentState;
-    fn set_parent_state(&mut self, value: ParentState);
+    fn set_parent_state_ref(&mut self, value: ParentState);
 
     fn update_dimension(&mut self) {
         let mut current_dimension = self.get_dimension();
@@ -71,7 +86,7 @@ pub trait Object {
             }
         }
 
-        self.set_dimension(current_dimension);
+        self.set_dimension_ref(current_dimension);
     }
 
     fn set_alignment(mut self, x: Option<DynamicPosition>, y: Option<DynamicPosition>) -> Self
@@ -79,7 +94,7 @@ pub trait Object {
         Self: Sized,
     {
         let position = self.get_position();
-        self.set_position(ObjectPosition {
+        self.set_position_ref(ObjectPosition {
             x_dyn: x,
             y_dyn: y,
             ..position
@@ -121,7 +136,7 @@ pub trait Object {
             parent_state_temp.height = screen_height();
         }
 
-        self.set_parent_state(parent_state_temp);
+        self.set_parent_state_ref(parent_state_temp);
     }
 
     fn update_alignment(&mut self) {
@@ -163,7 +178,7 @@ pub trait Object {
             }
         }
 
-        self.set_position(position_temp);
+        self.set_position_ref(position_temp);
     }
 }
 

@@ -1,11 +1,7 @@
 use macroquad::color::Color;
 
 use crate::ui::{
-    Object,
-    config::{dimension::ObjectDimension, position::ObjectPosition},
-    draw::draw_rectangle_extended,
-    gradient::Gradient,
-    parent::ParentState,
+    Object, State, config::{dimension::ObjectDimension, position::ObjectPosition}, draw::draw_rectangle_extended, gradient::Gradient, parent::ParentState,
 };
 
 pub struct RectangleConfig {
@@ -59,13 +55,20 @@ impl Rectangle {
 }
 
 impl Object for Rectangle {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
     fn update(
         &mut self,
         parent_x: Option<f32>,
         parent_y: Option<f32>,
         parent_w: Option<f32>,
         parent_h: Option<f32>,
-    ) -> Option<usize> {
+        state: &Option<State>
+    ) -> Option<State> {
         self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
         self.update_dimension();
         self.update_alignment();
@@ -100,15 +103,15 @@ impl Object for Rectangle {
         return self.position.clone();
     }
 
-    fn set_dimension(&mut self, value: ObjectDimension) {
+    fn set_dimension_ref(&mut self, value: ObjectDimension) {
         self.dimension = value;
     }
 
-    fn set_position(&mut self, value: ObjectPosition) {
+    fn set_position_ref(&mut self, value: ObjectPosition) {
         self.position = value;
     }
 
-    fn set_parent_state(&mut self, value: ParentState) {
+    fn set_parent_state_ref(&mut self, value: ParentState) {
         self.parent = value;
     }
 }

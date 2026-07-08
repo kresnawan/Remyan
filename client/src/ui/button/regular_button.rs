@@ -1,14 +1,9 @@
 use macroquad::prelude::*;
 
 use crate::ui::{
-    Object,
-    button::{Button, ButtonAttribute, ButtonConfig},
-    config::{
-        dimension::ObjectDimension,
-        position::{ObjectPosition},
-    },
-    draw::draw_rectangle_extended,
-    parent::ParentState,
+    Object, State, button::{Button, ButtonAttribute, ButtonConfig}, config::{
+        dimension::ObjectDimension, position::ObjectPosition,
+    }, draw::draw_rectangle_extended, parent::ParentState,
 };
 
 pub struct RegularButton {
@@ -39,13 +34,20 @@ impl RegularButton {
 }
 
 impl Object for RegularButton {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
     fn update(
         &mut self,
         parent_x: Option<f32>,
         parent_y: Option<f32>,
         parent_w: Option<f32>,
         parent_h: Option<f32>,
-    ) -> Option<usize> {
+        state: &Option<State>
+    ) -> Option<State> {
         self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
         self.update_dimension();
         self.update_alignment();
@@ -67,7 +69,7 @@ impl Object for RegularButton {
         self.attribute.is_pressed = is_pressed;
         self.attribute.is_clicked = is_clicked;
 
-        if let Some(event) = &self.attribute.on_click_event {
+        if let Some(event) = &mut self.attribute.on_click_event {
             if self.attribute.is_clicked {
                 if let Some(n) = event() {
                     return Some(n);
@@ -165,15 +167,15 @@ impl Object for RegularButton {
         return self.position.clone();
     }
 
-    fn set_dimension(&mut self, value: ObjectDimension) {
+    fn set_dimension_ref(&mut self, value: ObjectDimension) {
         self.dimension = value;
     }
 
-    fn set_position(&mut self, value: ObjectPosition) {
+    fn set_position_ref(&mut self, value: ObjectPosition) {
         self.position = value;
     }
 
-    fn set_parent_state(&mut self, value: ParentState) {
+    fn set_parent_state_ref(&mut self, value: ParentState) {
         self.parent = value;
     }
 }
@@ -221,7 +223,7 @@ impl Button for RegularButton {
 
     fn on_click<F>(mut self, callback: F) -> Self
     where
-        F: Fn() -> Option<usize> + 'static,
+        F: Fn() -> Option<State> + 'static,
     {
         self.attribute.on_click_event = Some(Box::new(callback));
         return self;

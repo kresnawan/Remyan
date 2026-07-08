@@ -6,9 +6,7 @@ use macroquad::{
 };
 
 use crate::ui::{
-    Object,
-    config::{dimension::ObjectDimension, position::ObjectPosition},
-    parent::ParentState,
+    Object, State, config::{dimension::ObjectDimension, position::ObjectPosition}, parent::ParentState,
 };
 
 pub struct PlusAttribute {
@@ -54,13 +52,20 @@ impl Plus {
 }
 
 impl Object for Plus {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
     fn update(
         &mut self,
         parent_x: Option<f32>,
         parent_y: Option<f32>,
         parent_w: Option<f32>,
         parent_h: Option<f32>,
-    ) -> Option<usize> {
+        state: &Option<State>
+    ) -> Option<State> {
         self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
         self.update_dimension();
         self.update_alignment();
@@ -157,21 +162,21 @@ impl Object for Plus {
         return self.position.clone();
     }
 
-    fn set_dimension(&mut self, value: ObjectDimension) {
+    fn set_dimension_ref(&mut self, value: ObjectDimension) {
         self.dimension = value;
     }
 
-    fn set_parent_state(&mut self, value: ParentState) {
+    fn set_parent_state_ref(&mut self, value: ParentState) {
         self.parent = value;
     }
 
-    fn set_position(&mut self, value: ObjectPosition) {
+    fn set_position_ref(&mut self, value: ObjectPosition) {
         self.position = value;
     }
 
     fn update_dimension(&mut self) {
         let length = self.attribute.length * 2.0 + self.attribute.thickness;
 
-        self.set_dimension(ObjectDimension { width: length, height: length, width_dyn: None, height_dyn: None });
+        self.set_dimension_ref(ObjectDimension { width: length, height: length, width_dyn: None, height_dyn: None });
     }
 }
