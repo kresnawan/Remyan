@@ -1,5 +1,5 @@
 use crate::ui::{
-    State, config::position::{ObjectPosition, PositionConfig}, font::Nunito, gradient::Gradient,
+    State, config::position::{ObjectPosition}, font::Nunito, gradient::Gradient,
 };
 use macroquad::prelude::*;
 pub mod regular_button;

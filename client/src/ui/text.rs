@@ -1,10 +1,17 @@
 use macroquad::{
     color::{Color, WHITE},
-    text::{Font, TextParams, draw_text_ex, measure_text},
+    text::{Font, TextParams, measure_text},
 };
 
 use crate::ui::{
-    HEADING_2, HEADING_3, HEADING_4, Object, State, config::{dimension::{DynamicDimension, ObjectDimension}, position::ObjectPosition}, draw::draw_text_extended, font::Nunito, parent::ParentState,
+    HEADING_3, Object, State,
+    config::{
+        dimension::{DynamicDimension, ObjectDimension},
+        position::ObjectPosition,
+    },
+    draw::draw_text_extended,
+    font::Nunito,
+    parent::ParentState,
 };
 
 pub struct TextConfig {
@@ -58,7 +65,7 @@ impl Text {
         self.config.font_size = value;
         let new_dimension = measure_text(&self.value, Some(&self.config.font), value as u16, 1.0);
         self.dimension.width = new_dimension.width;
-        
+
         self
     }
 
@@ -96,7 +103,7 @@ impl Object for Text {
         parent_y: Option<f32>,
         parent_w: Option<f32>,
         parent_h: Option<f32>,
-        state: &Option<State>
+        _: &Option<State>,
     ) -> Option<State> {
         self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
         self.update_dimension();

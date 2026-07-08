@@ -1,4 +1,4 @@
-use macroquad::color::{BLANK, Color, WHITE};
+use macroquad::color::{BLANK, Color};
 
 use crate::ui::{
     Object, State, config::{dimension::ObjectDimension, position::{DynamicPosition, ObjectPosition}}, gradient::Gradient, parent::ParentState, plus::{Plus, PlusAttribute}, rectangle::{Rectangle, RectangleConfig},
@@ -6,9 +6,9 @@ use crate::ui::{
 
 pub struct PlayerSlotState {
     pub player: Option<String>,
-    is_hovered: bool,
-    is_pressed: bool,
-    is_clicked: bool,
+    pub is_hovered: bool,
+    pub is_pressed: bool,
+    pub is_clicked: bool,
     plus: Plus,
 }
 

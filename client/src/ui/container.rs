@@ -1,15 +1,11 @@
-use std::sync::Arc;
-
 use macroquad::{
     color::Color,
     shapes::draw_rectangle,
-    window::{screen_height, screen_width},
 };
 
 use crate::ui::{
     Object, State, config::{
         dimension::{
-            DynamicDimension::{Custom, Percent},
             ObjectDimension,
         },
         position::ObjectPosition,

@@ -67,7 +67,7 @@ impl Object for Rectangle {
         parent_y: Option<f32>,
         parent_w: Option<f32>,
         parent_h: Option<f32>,
-        state: &Option<State>
+        _: &Option<State>
     ) -> Option<State> {
         self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
         self.update_dimension();

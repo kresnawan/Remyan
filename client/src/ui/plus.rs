@@ -1,12 +1,14 @@
 use macroquad::{
-    color::{Color, WHITE},
+    color::Color,
     math::{vec2, vec3, vec4},
     models::{Mesh, draw_mesh},
     ui::Vertex,
 };
 
 use crate::ui::{
-    Object, State, config::{dimension::ObjectDimension, position::ObjectPosition}, parent::ParentState,
+    Object, State,
+    config::{dimension::ObjectDimension, position::ObjectPosition},
+    parent::ParentState,
 };
 
 pub struct PlusAttribute {
@@ -64,7 +66,7 @@ impl Object for Plus {
         parent_y: Option<f32>,
         parent_w: Option<f32>,
         parent_h: Option<f32>,
-        state: &Option<State>
+        _: &Option<State>,
     ) -> Option<State> {
         self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
         self.update_dimension();
@@ -75,7 +77,6 @@ impl Object for Plus {
 
     fn draw(&self) {
         let mut vertices: Vec<Vertex> = Vec::new();
-        let mut indices: Vec<u16> = Vec::new();
 
         let length = self.attribute.length;
         let thickness = self.attribute.thickness;
@@ -138,7 +139,7 @@ impl Object for Plus {
             vertices.push(v);
         }
 
-        indices = vec![
+        let indices = vec![
             0, 2, 1, 0, 1, 4, 0, 2, 5, 0, 4, 3, 0, 3, 7, 0, 7, 8, 0, 8, 11, 0, 11, 12, 0, 12, 9, 0,
             9, 10, 0, 10, 6, 0, 6, 5,
         ];
@@ -177,6 +178,11 @@ impl Object for Plus {
     fn update_dimension(&mut self) {
         let length = self.attribute.length * 2.0 + self.attribute.thickness;
 
-        self.set_dimension_ref(ObjectDimension { width: length, height: length, width_dyn: None, height_dyn: None });
+        self.set_dimension_ref(ObjectDimension {
+            width: length,
+            height: length,
+            width_dyn: None,
+            height_dyn: None,
+        });
     }
 }

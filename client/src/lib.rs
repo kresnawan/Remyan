@@ -1,11 +1,9 @@
 use macroquad::{
-    color::{BLACK, WHITE},
-    text::draw_text,
+    color::BLACK,
     window::{clear_background, next_frame},
 };
 
 use crate::{
-    GameState::Running,
     page::{Page, main_menu::MainMenu, room::Room},
     ui::State,
 };

@@ -1,16 +1,14 @@
 use std::sync::Arc;
 
 use macroquad::{
-    color::{BLACK, Color, GREEN, PURPLE},
+    color::{BLACK, Color, GREEN},
     window::{screen_height, screen_width},
 };
 
 use crate::ui::{
     Object, State,
-    button::regular_button::RegularButton,
     config::{
         dimension::{
-            self,
             DynamicDimension::{self, Custom},
             ObjectDimension,
         },
@@ -60,7 +58,7 @@ impl DialogueBox {
         id: u8
     ) -> Self {
         let mut cont = Container::new(position, dimension.clone(), ParentState::new(), Some(GREEN));
-        let mut marginer = Container::new(
+        let marginer = Container::new(
             ObjectPosition::dynamic(Center, Center),
             ObjectDimension::dynamic(
                 Custom(Arc::new(|_, _, pw, _| pw - 80.0)),
