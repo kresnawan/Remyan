@@ -1,44 +1,82 @@
-use macroquad::window::next_frame;
+use macroquad::{
+    color::{BLACK, WHITE},
+    text::draw_text,
+    window::{clear_background, next_frame},
+};
 
-use crate::page::{Page, main_menu::MainMenu, room::Room};
+use crate::{
+    GameState::Running,
+    page::{Page, main_menu::MainMenu, room::Room},
+    ui::State,
+};
 
 pub mod page;
 pub mod ui;
 
-pub enum PageIndex {
-    MainMenu = 0,
-    Room = 1,
+#[derive(Clone)]
+pub enum Pages {
+    MainMenu,
+    Room,
+}
+
+pub enum GameState {
+    Loading,
+    Running,
+    Uninitialized,
 }
 
 pub struct App {
-    pub current_page: usize,
-    pub pages: Vec<Box<dyn Page>>,
+    pub current_page: Option<Box<dyn Page>>,
+    pub game_state: GameState,
+    pub pre_allocated_pages: Vec<Box<dyn Page>>,
+    pub next_page_to_load: Option<Pages>,
 }
 
 impl App {
     pub fn new() -> Self {
-        let main_menu = Box::new(MainMenu::new("Kresnawan"));
-        let room = Box::new(Room::new());
         Self {
-            current_page: PageIndex::MainMenu as usize,
-            pages: vec![main_menu, room],
+            current_page: None,
+            game_state: GameState::Uninitialized,
+            pre_allocated_pages: Vec::new(),
+            next_page_to_load: Some(Pages::MainMenu),
         }
     }
 
-    fn get_current_page_mut(&mut self) -> &mut Box<dyn Page> {
-        return &mut self.pages[self.current_page];
-    }
-
-    fn get_current_page(&mut self) -> &Box<dyn Page> {
-        return &self.pages[self.current_page];
-    }
-
     pub async fn init(&mut self) {
+        let mut global_state: Option<State> = None;
+        self.game_state = GameState::Loading;
         loop {
-            if let Some(next_page) = self.get_current_page_mut().update() {
-                self.current_page = next_page;
+            match self.game_state {
+                GameState::Loading => {
+                    clear_background(BLACK);
+                    if let Some(next_page) = &self.next_page_to_load {
+                        match next_page {
+                            Pages::MainMenu => {
+                                self.current_page = Some(Box::new(MainMenu::new("Kresna")))
+                            }
+                            Pages::Room => self.current_page = Some(Box::new(Room::new())),
+                        }
+
+                        self.game_state = GameState::Running;
+                    }
+                }
+
+                GameState::Running => {
+                    if let Some(state) = self.current_page.as_mut().unwrap().update(&global_state) {
+                        match state {
+                            State::MovePage(next_page) => {
+                                self.game_state = GameState::Loading;
+                                self.next_page_to_load = Some(next_page);
+                                global_state = None;
+                            }
+                            _ => global_state = Some(state),
+                        }
+                    }
+                    self.current_page.as_ref().unwrap().draw();
+                }
+
+                _ => {}
             }
-            self.get_current_page().draw();
 
             next_frame().await
         }
