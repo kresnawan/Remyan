@@ -1,10 +1,21 @@
 use macroquad::prelude::*;
 
 use crate::{
-    PageIndex, page::Page, ui::{
-        Object, button::{Button, ButtonConfig, regular_button::RegularButton}, config::{
-            dimension::{DynamicDimension::{self, Full}, ObjectDimension}, position::{DynamicPosition, ObjectPosition, Position},
-        }, container::Container, draw::draw_rectangle_extended, parent::ParentState,
+    Pages,
+    page::Page,
+    ui::{
+        Object, State,
+        button::{Button, ButtonConfig, regular_button::RegularButton},
+        config::{
+            dimension::{
+                DynamicDimension::{self, Full},
+                ObjectDimension,
+            },
+            position::{DynamicPosition, ObjectPosition, Position},
+        },
+        container::Container,
+        draw::draw_rectangle_extended,
+        parent::ParentState,
     },
 };
 
@@ -15,15 +26,14 @@ pub struct MainMenu {
 
 impl MainMenu {
     pub fn new(player_name: &str) -> MainMenu {
-        let create_room_btn =
-            RegularButton::new(ObjectPosition::absolute(0.0, 0.0), ButtonConfig::default("Buat Room"))
-                .on_click(|| {
-                    println!("Terpencet");
-                    return None;
-                })
-                .set_padding(0.0, 50.0)
-                .set_dimensions(screen_width() / 2.0, 0.0)
-                .set_alignment(Some(DynamicPosition::Center), None);
+        let create_room_btn = RegularButton::new(
+            ObjectPosition::absolute(0.0, 0.0),
+            ButtonConfig::default("Buat Room"),
+        )
+        .on_click(|| return Some(State::MovePage(Pages::Room)))
+        .set_padding(0.0, 50.0)
+        .set_dimensions(screen_width() / 2.0, 0.0)
+        .set_alignment(Some(DynamicPosition::Center), None);
 
         let join_room_btn = RegularButton::new(
             ObjectPosition::absolute(0.0, 150.0),
@@ -31,7 +41,7 @@ impl MainMenu {
         )
         .on_click(|| {
             println!("Masuk Room");
-            return Some(PageIndex::Room as usize);
+            return Some(State::MovePage(Pages::Room));
         })
         .set_padding(0.0, 50.0)
         .set_dimensions(screen_width() / 2.0, 0.0)
@@ -42,8 +52,7 @@ impl MainMenu {
             ButtonConfig::default("Pengaturan"),
         )
         .on_click(|| {
-            println!("Masuk Room");
-            return Some(PageIndex::Room as usize);
+            return None;
         })
         .set_padding(0.0, 50.0)
         .set_dimensions(screen_width() / 2.0, 0.0)
@@ -67,9 +76,9 @@ impl MainMenu {
 }
 
 impl Page for MainMenu {
-    fn update(&mut self) -> Option<usize> {
+    fn update(&mut self, state: &Option<State>) -> Option<State> {
         for item in &mut self.objects {
-            if let Some(n) = item.update(None, None, None, None) {
+            if let Some(n) = item.update(None, None, None, None, state) {
                 return Some(n);
             }
         }
