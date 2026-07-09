@@ -1,7 +1,20 @@
 use macroquad::color::{BLANK, Color};
 
-use crate::ui::{
-    Object, State, config::{dimension::ObjectDimension, position::{DynamicPosition, ObjectPosition}}, gradient::Gradient, parent::ParentState, plus::{Plus, PlusAttribute}, rectangle::{Rectangle, RectangleConfig},
+use crate::{
+    state::State,
+    ui::{
+        config::{
+            dimension::ObjectDimension,
+            gradient::Gradient,
+            parent::ParentState,
+            position::{DynamicPosition, ObjectPosition},
+        },
+        traits::object::Object,
+        widgets::{
+            plus::{Plus, PlusAttribute},
+            rectangle::{Rectangle, RectangleConfig},
+        },
+    },
 };
 
 pub struct PlayerSlotState {
@@ -88,7 +101,7 @@ impl Object for PlayerSlot {
         parent_y: Option<f32>,
         parent_w: Option<f32>,
         parent_h: Option<f32>,
-        state: &Option<State>
+        state: &Option<State>,
     ) -> Option<State> {
         self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
         self.update_dimension();
@@ -99,7 +112,7 @@ impl Object for PlayerSlot {
             Some(self.position.y + self.parent.y),
             Some(self.dimension.width),
             Some(self.dimension.height),
-            state
+            state,
         );
 
         return None;
@@ -124,7 +137,7 @@ impl Object for PlayerSlot {
             Some(self.position.y + self.parent.y),
             Some(self.dimension.width),
             Some(self.dimension.height),
-            &None
+            &None,
         );
     }
 
@@ -139,7 +152,7 @@ impl Object for PlayerSlot {
             Some(self.position.y + self.parent.y),
             Some(self.dimension.width),
             Some(self.dimension.height),
-            &None
+            &None,
         );
     }
 }

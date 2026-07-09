@@ -1,27 +1,8 @@
 use std::sync::Arc;
 
-use macroquad::{
-    color::{BLACK, Color, GREEN},
-    window::{screen_height, screen_width},
-};
+use macroquad::{color::{BLACK, Color, GREEN}, window::{screen_height, screen_width}};
 
-use crate::ui::{
-    Object, State,
-    config::{
-        dimension::{
-            DynamicDimension::{self, Custom},
-            ObjectDimension,
-        },
-        position::{
-            DynamicPosition::{self, Center},
-            ObjectPosition,
-        },
-    },
-    container::Container,
-    gradient::Gradient,
-    parent::ParentState,
-    rectangle::{Rectangle, RectangleConfig},
-};
+use crate::{state::State, ui::{config::{dimension::{DynamicDimension, ObjectDimension}, gradient::Gradient, parent::ParentState, position::{DynamicPosition, ObjectPosition}}, traits::object::Object, widgets::{container::Container, rectangle::{Rectangle, RectangleConfig}}}};
 
 pub struct DialogueBoxState {
     is_shown: bool,
@@ -59,10 +40,10 @@ impl DialogueBox {
     ) -> Self {
         let mut cont = Container::new(position, dimension.clone(), ParentState::new(), Some(GREEN));
         let marginer = Container::new(
-            ObjectPosition::dynamic(Center, Center),
+            ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
             ObjectDimension::dynamic(
-                Custom(Arc::new(|_, _, pw, _| pw - 80.0)),
-                Custom(Arc::new(|_, _, _, ph| ph - 80.0)),
+                DynamicDimension::Custom(Arc::new(|_, _, pw, _| pw - 80.0)),
+                DynamicDimension::Custom(Arc::new(|_, _, _, ph| ph - 80.0)),
             ),
             ParentState::new(),
             None,

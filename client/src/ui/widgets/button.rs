@@ -1,9 +1,7 @@
-use crate::ui::{
-    State, config::position::{ObjectPosition}, font::Nunito, gradient::Gradient,
-};
-use macroquad::prelude::*;
-pub mod regular_button;
+use macroquad::{color::{Color, WHITE}, text::Font};
 
+use crate::{state::State, ui::config::{font::Nunito, gradient::Gradient, position::ObjectPosition}};
+pub mod regular_button;
 pub trait Button {
     fn new(position: ObjectPosition, config: ButtonConfig) -> Self
     where

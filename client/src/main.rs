@@ -1,4 +1,4 @@
-use client::App;
+use client::app::App;
 use macroquad::prelude::*;
 
 fn window_config() -> Conf {

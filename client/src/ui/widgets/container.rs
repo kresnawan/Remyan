@@ -1,16 +1,6 @@
-use macroquad::{
-    color::Color,
-    shapes::draw_rectangle,
-};
+use macroquad::{color::Color, shapes::draw_rectangle};
 
-use crate::ui::{
-    Object, State, config::{
-        dimension::{
-            ObjectDimension,
-        },
-        position::ObjectPosition,
-    }, parent::ParentState,
-};
+use crate::{state::State, ui::{config::{dimension::ObjectDimension, parent::ParentState, position::ObjectPosition}, traits::object::Object}};
 
 pub struct Container {
     position: ObjectPosition,

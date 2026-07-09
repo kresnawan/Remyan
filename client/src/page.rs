@@ -1,4 +1,4 @@
-use crate::ui::State;
+use crate::state::State;
 
 pub mod main_menu;
 pub mod room;
@@ -6,4 +6,10 @@ pub mod room;
 pub trait Page {
     fn update(&mut self, state: &Option<State>) -> Option<State>;
     fn draw(&self) {}
+}
+
+#[derive(Clone)]
+pub enum Pages {
+    MainMenu,
+    Room,
 }

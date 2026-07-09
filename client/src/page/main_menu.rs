@@ -1,22 +1,23 @@
 use macroquad::prelude::*;
 
+use crate::ui::widgets::button::Button;
+
 use crate::{
-    Pages,
-    page::Page,
+    page::{Page, Pages},
+    state::State,
     ui::{
-        Object, State,
-        button::{Button, ButtonConfig, regular_button::RegularButton},
         config::{
-            dimension::{
-                DynamicDimension::{self, Full},
-                ObjectDimension,
-            },
-            position::{DynamicPosition, ObjectPosition, Position},
+            dimension::{DynamicDimension, ObjectDimension},
+            parent::ParentState,
+            position::{DynamicPosition, ObjectPosition},
         },
-        container::Container,
-        draw::draw_rectangle_extended,
-        parent::ParentState,
+        traits::object::Object,
+        widgets::{
+            button::{ButtonConfig, regular_button::RegularButton},
+            container::Container,
+        },
     },
+    wrapper::draw::draw_rectangle_extended,
 };
 
 pub struct MainMenu {
@@ -60,7 +61,7 @@ impl MainMenu {
 
         let div = Container::new(
             ObjectPosition::absolute(0.0, 500.0),
-            ObjectDimension::dynamic(Full, Full),
+            ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Full),
             ParentState::new(),
             None,
         )

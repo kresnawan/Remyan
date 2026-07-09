@@ -1,39 +1,35 @@
 use std::sync::Arc;
 
 use macroquad::{
-    color::{BLACK, BLUE, Color, GREEN, PURPLE, RED, WHITE, YELLOW},
+    color::{BLACK, Color, WHITE},
     window::{screen_height, screen_width},
 };
 use remyan_core::Player;
 
+use crate::ui::widgets::button::Button;
+
 use crate::{
-    Pages,
-    page::Page,
+    page::{Page, Pages},
+    state::State,
     ui::{
-        HEADING_2, HEADING_3, Object,
-        State::{self, MovePage},
-        button::{Button, ButtonConfig, regular_button::RegularButton},
         config::{
-            dimension::{
-                DynamicDimension::{self, Custom, Full, Percent},
-                ObjectDimension,
-            },
-            position::{
-                DynamicPosition::{self, Center, End, Start},
-                ObjectPosition, Position,
-            },
+            dimension::{DynamicDimension, ObjectDimension},
+            font::Nunito,
+            gradient::Gradient,
+            parent::ParentState,
+            position::{DynamicPosition, ObjectPosition},
         },
-        container::Container,
-        dialogue_box::{DialogueBox, DialogueBoxState},
-        draw::draw_rectangle_extended,
-        font::Nunito,
-        gradient::Gradient,
-        parent::ParentState,
-        player_slot::PlayerSlot,
-        plus::{Plus, PlusAttribute},
-        rectangle::{Rectangle, RectangleConfig},
-        text::Text,
+        traits::object::Object,
+        widgets::{
+            button::{ButtonConfig, regular_button::RegularButton},
+            container::Container,
+            dialogue_box::{DialogueBox, DialogueBoxState},
+            player_slot::PlayerSlot,
+            rectangle::{Rectangle, RectangleConfig},
+            text::{HEADING_2, HEADING_3, Text},
+        },
     },
+    wrapper::draw::draw_rectangle_extended,
 };
 
 pub struct Room {
@@ -44,7 +40,7 @@ pub struct Room {
 impl Room {
     pub fn new() -> Self {
         let mut quit_room_dialog = DialogueBox::new(
-            ObjectPosition::dynamic(Center, Center),
+            ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
             ObjectDimension::absolute(800.0, 400.0),
             DialogueBoxState::new(
                 Gradient::new(0.0, vec![Color::from_hex(0x2e2e2e)]),
@@ -58,35 +54,38 @@ impl Room {
 
         let mut wrapper_3_top_top = Container::new(
             ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Start),
-            ObjectDimension::dynamic(DynamicDimension::Full, Percent(10.0)),
+            ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Percent(10.0)),
             ParentState::new(),
             None,
         );
 
         let mut wrapper_3_top_bottom_marginer = Container::new(
             ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
-            ObjectDimension::dynamic(DynamicDimension::Percent(70.0), Percent(90.0)),
+            ObjectDimension::dynamic(
+                DynamicDimension::Percent(70.0),
+                DynamicDimension::Percent(90.0),
+            ),
             ParentState::new(),
             None,
         );
 
         let mut wrapper_3_top_bottom = Container::new(
             ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::End),
-            ObjectDimension::dynamic(Full, Percent(90.0)),
+            ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Percent(90.0)),
             ParentState::new(),
             None,
         );
 
         let mut wrapper_3_top = Container::new(
             ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Start),
-            ObjectDimension::dynamic(Full, Percent(80.0)),
+            ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Percent(80.0)),
             ParentState::new(),
             None,
         );
 
         let mut wrapper_3_bottom = Container::new(
             ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::End),
-            ObjectDimension::dynamic(Full, Percent(15.0)),
+            ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Percent(15.0)),
             ParentState::new(),
             None,
         );
@@ -94,8 +93,8 @@ impl Room {
         let mut wrapper_2 = Container::new(
             ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
             ObjectDimension::dynamic(
-                Custom(Arc::new(|_, _, p_width, _| p_width - 70.5 * 2.0)),
-                Custom(Arc::new(|_, _, _, p_height| p_height - 70.5 * 2.0)),
+                DynamicDimension::Custom(Arc::new(|_, _, p_width, _| p_width - 70.5 * 2.0)),
+                DynamicDimension::Custom(Arc::new(|_, _, _, p_height| p_height - 70.5 * 2.0)),
             ),
             ParentState::new(),
             None,
@@ -103,7 +102,7 @@ impl Room {
 
         let mut wrapper = Container::new(
             ObjectPosition::absolute(0.0, 0.0),
-            ObjectDimension::dynamic(Full, Full),
+            ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Full),
             ParentState::new(),
             None,
         );
@@ -112,7 +111,7 @@ impl Room {
             ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Start),
             ButtonConfig::default("Mulai Game"),
         )
-        .on_click(|| return Some(MovePage(Pages::MainMenu)))
+        .on_click(|| return Some(State::MovePage(Pages::MainMenu)))
         .set_padding(100.0, 50.0);
 
         let room_config_btn = RegularButton::new(
@@ -128,7 +127,7 @@ impl Room {
                 Nunito::black(),
             ),
         )
-        .on_click(|| return Some(MovePage(Pages::MainMenu)))
+        .on_click(|| return Some(State::MovePage(Pages::MainMenu)))
         .set_padding(75.0, 25.0);
 
         let left_room_btn = RegularButton::new(
@@ -149,7 +148,7 @@ impl Room {
 
         let rectang = Rectangle::new(
             ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Start),
-            ObjectDimension::dynamic(Full, Full),
+            ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Full),
             ParentState::new(),
             RectangleConfig {
                 corner_radius: 10.0,
@@ -183,7 +182,10 @@ impl Room {
         );
 
         let quit_room_dialog_heading = Text::new("Keluar Dari Room?")
-            .set_position(ObjectPosition::dynamic(Center, Start))
+            .set_position(ObjectPosition::dynamic(
+                DynamicPosition::Center,
+                DynamicPosition::Start,
+            ))
             .set_font_size(HEADING_2);
 
         let quit_room_dialog_p = Text::new(
@@ -191,7 +193,7 @@ impl Room {
         )
             .wrap_text()
             .set_font_size(HEADING_3)
-            .set_position(ObjectPosition::new(0.0, 60.0, Some(Center), None));
+            .set_position(ObjectPosition::new(0.0, 60.0, Some(DynamicPosition::Center), None));
 
         let y_btn = RegularButton::new(
             ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::Start),
@@ -228,8 +230,8 @@ impl Room {
         .set_padding(75.0, 25.0);
 
         let mut quit_room_dialog_btn_wrapper = Container::new(
-            ObjectPosition::dynamic(Center, End),
-            ObjectDimension::dynamic(Full, Percent(20.0)),
+            ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::End),
+            ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Percent(20.0)),
             ParentState::new(),
             None,
         );

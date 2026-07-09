@@ -1,8 +1,8 @@
 use macroquad::color::Color;
 
-use crate::ui::{
-    Object, State, config::{dimension::ObjectDimension, position::ObjectPosition}, draw::draw_rectangle_extended, gradient::Gradient, parent::ParentState,
-};
+use crate::{state::State, ui::{config::{dimension::ObjectDimension, gradient::Gradient, parent::ParentState, position::ObjectPosition}, traits::object::Object}, wrapper::draw::draw_rectangle_extended};
+
+
 
 pub struct RectangleConfig {
     pub corner_radius: f32,

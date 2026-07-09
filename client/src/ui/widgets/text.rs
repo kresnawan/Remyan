@@ -3,16 +3,24 @@ use macroquad::{
     text::{Font, TextParams, measure_text},
 };
 
-use crate::ui::{
-    HEADING_3, Object, State,
-    config::{
-        dimension::{DynamicDimension, ObjectDimension},
-        position::ObjectPosition,
+use crate::{
+    state::State,
+    ui::{
+        config::{
+            dimension::{DynamicDimension, ObjectDimension},
+            font::Nunito,
+            parent::ParentState,
+            position::ObjectPosition,
+        },
+        traits::object::Object,
     },
-    draw::draw_text_extended,
-    font::Nunito,
-    parent::ParentState,
+    wrapper::draw::draw_text_extended,
 };
+
+pub const HEADING_1: f32 = 48.0;
+pub const HEADING_2: f32 = 36.0;
+pub const HEADING_3: f32 = 24.0;
+pub const HEADING_4: f32 = 12.0;
 
 pub struct TextConfig {
     font: Font,

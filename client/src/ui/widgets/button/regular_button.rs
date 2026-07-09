@@ -1,10 +1,6 @@
 use macroquad::prelude::*;
 
-use crate::ui::{
-    Object, State, button::{Button, ButtonAttribute, ButtonConfig}, config::{
-        dimension::ObjectDimension, position::ObjectPosition,
-    }, draw::draw_rectangle_extended, parent::ParentState,
-};
+use crate::{state::State, ui::{config::{dimension::ObjectDimension, parent::ParentState, position::ObjectPosition}, traits::object::Object, widgets::button::{Button, ButtonAttribute, ButtonConfig}}, wrapper::draw::draw_rectangle_extended};
 
 pub struct RegularButton {
     position: ObjectPosition,
@@ -188,7 +184,7 @@ impl Button for RegularButton {
         let text_dimensions = measure_text(&config.text, None, config.text_size as u16, 1.0);
 
         RegularButton {
-            position,
+            position: position,
             dimension: ObjectDimension {
                 width: text_dimensions.width,
                 height: text_dimensions.height,
