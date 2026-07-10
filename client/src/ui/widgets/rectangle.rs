@@ -3,13 +3,14 @@ use macroquad::color::Color;
 use crate::{state::State, ui::{config::{dimension::ObjectDimension, gradient::Gradient, parent::ParentState, position::ObjectPosition}, traits::object::Object}, wrapper::draw::draw_rectangle_extended};
 
 
-
+#[derive(Clone)]
 pub struct RectangleConfig {
     pub corner_radius: f32,
     pub color: Gradient,
     pub outline: f32,
     pub outline_color: Color,
 }
+
 
 impl RectangleConfig {
     pub fn new(corner_radius: f32, color: Gradient, outline: f32, outline_color: Color) -> Self {

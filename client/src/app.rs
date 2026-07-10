@@ -56,6 +56,7 @@ impl App {
                                 self.next_page_to_load = Some(next_page);
                                 global_state = None;
                             }
+
                             _ => global_state = Some(state),
                         }
                     }

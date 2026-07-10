@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 
-use crate::{state::State, ui::{config::{dimension::ObjectDimension, parent::ParentState, position::ObjectPosition}, traits::object::Object, widgets::button::{Button, ButtonAttribute, ButtonConfig}}, wrapper::draw::draw_rectangle_extended};
+use crate::{state::State, ui::{config::{dimension::ObjectDimension, parent::ParentState, position::ObjectPosition}, traits::{click::Clickable, hover::Hoverable, object::Object, press::Pressable}, widgets::button::{Button, ButtonAttribute, ButtonConfig}}, wrapper::draw::draw_rectangle_extended};
 
 pub struct RegularButton {
     position: ObjectPosition,
@@ -8,6 +8,7 @@ pub struct RegularButton {
     parent: ParentState,
     text: String,
     attribute: ButtonAttribute,
+    is_on_dialogue: bool
 }
 
 impl RegularButton {
@@ -17,15 +18,14 @@ impl RegularButton {
         return self;
     }
 
-    pub fn set_dimensions(mut self, width: f32, height: f32) -> Self {
-        if width > 0.0 {
-            self.dimension.width = width;
-        }
-        if height > 0.0 {
-            self.dimension.height = height;
-        }
+    pub fn set_dimensions(mut self, value: ObjectDimension) -> Self {
+        self.dimension = value;
+        self
+    }
 
-        return self;
+    pub fn set_is_on_dialogue(mut self) -> Self {
+        self.is_on_dialogue = true;
+        self
     }
 }
 
@@ -42,28 +42,29 @@ impl Object for RegularButton {
         parent_y: Option<f32>,
         parent_w: Option<f32>,
         parent_h: Option<f32>,
-        _: &Option<State>
+        state: &Option<State>
     ) -> Option<State> {
         self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
         self.update_dimension();
         self.update_alignment();
 
-        let (mouse_x, mouse_y) = mouse_position();
-        let btn_x = self.position.x + self.parent.x;
-        let btn_y = self.position.y + self.parent.y;
-        let btn_w = self.dimension.width;
-        let btn_h = self.dimension.height;
-        let is_hovered = mouse_x >= btn_x
-            && mouse_x <= btn_x + btn_w
-            && mouse_y >= btn_y
-            && mouse_y <= btn_y + btn_h;
+        self.update_hover();
+        
 
-        let is_pressed = is_hovered && is_mouse_button_down(MouseButton::Left);
-        let is_clicked = is_hovered && is_mouse_button_released(MouseButton::Left);
+        if let Some(state) = state {
+            match state {
+                State::OpenDialogueBox(_) => {
+                    if !self.is_on_dialogue {
+                        self.attribute.is_hovered = false;
+                    }
+                }
 
-        self.attribute.is_hovered = is_hovered;
-        self.attribute.is_pressed = is_pressed;
-        self.attribute.is_clicked = is_clicked;
+                _ => {}
+            }
+        }
+
+        self.update_is_clicked();
+        self.update_is_pressed();
 
         if let Some(event) = &mut self.attribute.on_click_event {
             if self.attribute.is_clicked {
@@ -155,6 +156,8 @@ impl Object for RegularButton {
         return self.dimension.clone();
     }
 
+    
+
     fn get_parent_state(&self) -> ParentState {
         return self.parent.clone();
     }
@@ -212,6 +215,7 @@ impl Button for RegularButton {
                 font: config.font,
             },
             text: config.text.to_uppercase(),
+            is_on_dialogue: false
         }
     }
 
@@ -223,5 +227,27 @@ impl Button for RegularButton {
     {
         self.attribute.on_click_event = Some(Box::new(callback));
         return self;
+    }
+}
+
+impl Hoverable for RegularButton {
+    fn set_is_hovered(&mut self, value: bool) {
+        self.attribute.is_hovered = value;
+    }
+
+    fn get_is_hovered(&self) -> bool {
+        return self.attribute.is_hovered
+    }
+}
+
+impl Clickable for RegularButton {
+    fn set_is_clicked(&mut self, value: bool) {
+        self.attribute.is_clicked = value;
+    }
+}
+
+impl Pressable for RegularButton {
+    fn set_is_pressed(&mut self, value: bool) {
+        self.attribute.is_pressed = value;
     }
 }

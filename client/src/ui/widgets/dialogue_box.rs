@@ -1,8 +1,26 @@
 use std::sync::Arc;
 
-use macroquad::{color::{BLACK, Color, GREEN}, window::{screen_height, screen_width}};
+use macroquad::{
+    color::{BLACK, Color, GREEN},
+    window::{screen_height, screen_width},
+};
 
-use crate::{state::State, ui::{config::{dimension::{DynamicDimension, ObjectDimension}, gradient::Gradient, parent::ParentState, position::{DynamicPosition, ObjectPosition}}, traits::object::Object, widgets::{container::Container, rectangle::{Rectangle, RectangleConfig}}}};
+use crate::{
+    state::State,
+    ui::{
+        config::{
+            dimension::{DynamicDimension, ObjectDimension},
+            gradient::Gradient,
+            parent::ParentState,
+            position::{DynamicPosition, ObjectPosition},
+        },
+        traits::object::Object,
+        widgets::{
+            container::Container,
+            rectangle::{Rectangle, RectangleConfig},
+        },
+    },
+};
 
 pub struct DialogueBoxState {
     is_shown: bool,
@@ -36,7 +54,7 @@ impl DialogueBox {
         position: ObjectPosition,
         dimension: ObjectDimension,
         state: DialogueBoxState,
-        id: u8
+        id: u8,
     ) -> Self {
         let mut cont = Container::new(position, dimension.clone(), ParentState::new(), Some(GREEN));
         let marginer = Container::new(
@@ -86,7 +104,7 @@ impl DialogueBox {
             parent: ParentState::new(),
             state: state,
             container: cont,
-            id
+            id,
         }
     }
 

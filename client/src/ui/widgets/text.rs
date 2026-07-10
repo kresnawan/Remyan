@@ -18,14 +18,20 @@ use crate::{
 };
 
 pub const HEADING_1: f32 = 48.0;
-pub const HEADING_2: f32 = 36.0;
-pub const HEADING_3: f32 = 24.0;
-pub const HEADING_4: f32 = 12.0;
+pub const HEADING_2: f32 = 42.0;
+pub const HEADING_3: f32 = 36.0;
+pub const HEADING_4: f32 = 30.0;
+pub const HEADING_5: f32 = 24.0;
+pub const HEADING_6: f32 = 18.0;
+pub const HEADING_7: f32 = 12.0;
+pub const HEADING_8: f32 = 6.0;
 
+#[derive(Clone)]
 pub struct TextConfig {
-    font: Font,
-    color: Color,
-    font_size: f32,
+    pub font: Font,
+    pub color: Color,
+    pub font_size: f32,
+    pub is_shown: bool,
 }
 
 impl TextConfig {
@@ -34,6 +40,16 @@ impl TextConfig {
             font: Nunito::regular(),
             color: WHITE,
             font_size: HEADING_3,
+            is_shown: true,
+        }
+    }
+
+    pub fn new(font: Font, color: Color, font_size: f32) -> Self {
+        TextConfig {
+            font,
+            color,
+            font_size,
+            is_shown: true,
         }
     }
 }
@@ -42,8 +58,8 @@ pub struct Text {
     position: ObjectPosition,
     dimension: ObjectDimension,
     parent: ParentState,
-    value: String,
-    config: TextConfig,
+    pub value: String,
+    pub config: TextConfig,
 }
 
 impl Text {
@@ -64,8 +80,18 @@ impl Text {
         self
     }
 
+    pub fn set_dimension(mut self, value: ObjectDimension) -> Self {
+        self.dimension = value;
+        self
+    }
+
     pub fn set_config(mut self, value: TextConfig) -> Self {
-        self.config = value;
+        self.config = value.clone();
+        let new_dimension =
+            measure_text(&self.value, Some(&value.font), value.font_size as u16, 1.0);
+        self.dimension.width = new_dimension.width;
+        self.dimension.height = new_dimension.height;
+
         self
     }
 
@@ -73,6 +99,7 @@ impl Text {
         self.config.font_size = value;
         let new_dimension = measure_text(&self.value, Some(&self.config.font), value as u16, 1.0);
         self.dimension.width = new_dimension.width;
+        self.dimension.height = new_dimension.height;
 
         self
     }
@@ -91,18 +118,26 @@ impl Object for Text {
         self
     }
     fn draw(&self) {
-        draw_text_extended(
-            &self.value,
-            self.position.x + self.parent.x,
-            self.position.y + self.parent.y + self.dimension.height,
-            Some(self.dimension.width),
-            TextParams {
-                font: Some(&self.config.font),
-                color: self.config.color,
-                font_size: self.config.font_size as u16,
-                ..Default::default()
-            },
-        );
+        if self.config.is_shown {
+            let current_dimension = measure_text(
+                &self.value,
+                Some(&self.config.font),
+                self.config.font_size as u16,
+                1.0,
+            );
+            draw_text_extended(
+                &self.value,
+                self.position.x + self.parent.x,
+                self.position.y + self.parent.y + current_dimension.offset_y,
+                Some(self.dimension.width),
+                TextParams {
+                    font: Some(&self.config.font),
+                    color: self.config.color,
+                    font_size: self.config.font_size as u16,
+                    ..Default::default()
+                },
+            );
+        }
     }
 
     fn update(
@@ -118,6 +153,42 @@ impl Object for Text {
         self.update_alignment();
 
         return None;
+    }
+
+    fn update_dimension(&mut self) {
+        let mut current_dimension = self.get_dimension();
+        let text_dimension = measure_text(
+            &self.value,
+            Some(&self.config.font),
+            self.config.font_size as u16,
+            1.0,
+        );
+        current_dimension.height = text_dimension.height;
+        let parent_state = self.get_parent_state();
+
+        if let Some(n) = &current_dimension.width_dyn {
+            match n {
+                DynamicDimension::Full => {
+                    current_dimension.width = parent_state.width;
+                }
+                DynamicDimension::Percent(value) => {
+                    current_dimension.width = (value / 100.0) * parent_state.width;
+                }
+                DynamicDimension::Custom(value) => {
+                    let res = value(
+                        parent_state.x,
+                        parent_state.y,
+                        parent_state.width,
+                        parent_state.height,
+                    );
+                    current_dimension.width = res;
+                }
+            }
+
+            self.set_dimension_ref(current_dimension);
+        } else {
+            self.dimension.width = text_dimension.width;
+        }
     }
 
     fn get_dimension(&self) -> ObjectDimension {
