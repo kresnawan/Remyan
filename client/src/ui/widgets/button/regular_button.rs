@@ -50,7 +50,13 @@ impl Object for RegularButton {
 
         self.update_hover();
         
-
+        // this is just naive workaround to make buttons which not contained in currently opened dialogue
+        // box to disabled so that it's not accidentaly clicked unintentionally
+        //
+        // it's created this way because we didn't find a way to make sure that hovered element is only
+        // one that visible on top
+        //
+        //
         if let Some(state) = state {
             match state {
                 State::OpenDialogueBox(_) => {
@@ -155,8 +161,6 @@ impl Object for RegularButton {
     fn get_dimension(&self) -> ObjectDimension {
         return self.dimension.clone();
     }
-
-    
 
     fn get_parent_state(&self) -> ParentState {
         return self.parent.clone();

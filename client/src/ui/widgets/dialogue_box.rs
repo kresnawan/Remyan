@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use macroquad::{
-    color::{BLACK, Color, GREEN},
-    window::{screen_height, screen_width},
+    color::{BLACK, Color, GREEN}, window::{screen_height, screen_width},
 };
 
 use crate::{
@@ -24,39 +23,36 @@ use crate::{
 
 pub struct DialogueBoxState {
     is_shown: bool,
-    background_color: Gradient,
-    outline_thickness: f32,
-    outline_color: Color,
 }
 
 impl DialogueBoxState {
-    pub fn new(bg_color: Gradient, outline_thickness: f32, outline_color: Color) -> Self {
-        DialogueBoxState {
-            is_shown: false,
-            background_color: bg_color,
-            outline_color,
-            outline_thickness,
-        }
+    pub fn new() -> Self {
+        DialogueBoxState { is_shown: false }
     }
+}
+
+pub struct DialogueBoxComponents {
+    container: Container,
+    marginer: Container,
+    dim: Rectangle,
+    background: Rectangle,
 }
 
 pub struct DialogueBox {
     id: u8,
-    position: ObjectPosition,
-    dimension: ObjectDimension,
     parent: ParentState,
     state: DialogueBoxState,
-    container: Container,
+    components: DialogueBoxComponents,
 }
 
 impl DialogueBox {
     pub fn new(
         position: ObjectPosition,
         dimension: ObjectDimension,
-        state: DialogueBoxState,
+        bg_config: RectangleConfig,
         id: u8,
     ) -> Self {
-        let mut cont = Container::new(position, dimension.clone(), ParentState::new(), Some(GREEN));
+        let container = Container::new(position, dimension, ParentState::new(), Some(GREEN));
         let marginer = Container::new(
             ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
             ObjectDimension::dynamic(
@@ -67,11 +63,11 @@ impl DialogueBox {
             None,
         );
 
-        let bg_dim = Rectangle::new(
-            ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
+        let dim = Rectangle::new(
+            ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::Start),
             ObjectDimension::dynamic(
-                DynamicDimension::Custom(Arc::new(|_, _, _, _| screen_width())),
-                DynamicDimension::Custom(Arc::new(|_, _, _, _| screen_height())),
+                DynamicDimension::Full,
+                DynamicDimension::Full,
             ),
             ParentState::new(),
             RectangleConfig::new(
@@ -82,29 +78,23 @@ impl DialogueBox {
             ),
         );
 
-        let d_bg = Rectangle::new(
+        let background = Rectangle::new(
             ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
             ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Full),
             ParentState::new(),
-            RectangleConfig::new(
-                5.0,
-                state.background_color.clone(),
-                state.outline_thickness,
-                state.outline_color,
-            ),
+            bg_config,
         );
 
-        cont.add_child_ref(Box::new(bg_dim));
-        cont.add_child_ref(Box::new(d_bg));
-        cont.add_child_ref(Box::new(marginer));
-
         DialogueBox {
-            position: ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
-            dimension,
             parent: ParentState::new(),
-            state: state,
-            container: cont,
+            state: DialogueBoxState::new(),
             id,
+            components: DialogueBoxComponents {
+                container,
+                marginer,
+                dim,
+                background,
+            },
         }
     }
 
@@ -113,11 +103,7 @@ impl DialogueBox {
     }
 
     pub fn add_object_ref(&mut self, object: Box<dyn Object>) {
-        let a = self.container.objects.get_mut(2);
-        if let Some(container) = a {
-            let casted: &mut Container = container.as_any_mut().downcast_mut().unwrap();
-            casted.add_child_ref(object);
-        }
+        self.components.marginer.add_child_ref(object);
     }
 }
 
@@ -130,7 +116,10 @@ impl Object for DialogueBox {
     }
     fn draw(&self) {
         if self.state.is_shown {
-            self.container.draw();
+            self.components.container.draw();
+            self.components.dim.draw();
+            self.components.background.draw();
+            self.components.marginer.draw();
         }
     }
 
@@ -160,10 +149,31 @@ impl Object for DialogueBox {
             }
         }
 
-        if let Some(value) = self
+        self.components
             .container
-            .update(parent_x, parent_y, parent_w, parent_h, state)
-        {
+            .update(parent_x, parent_y, parent_w, parent_h, state);
+        self.components.dim.update(
+            Some(0.0),
+            Some(0.0),
+            Some(screen_width()),
+            Some(screen_height()),
+            state,
+        );
+        self.components.background.update(
+            Some(self.components.container.position.x + self.components.container.parent.x),
+            Some(self.components.container.position.y + self.components.container.parent.y),
+            Some(self.components.container.dimension.width),
+            Some(self.components.container.dimension.height),
+            state,
+        );
+
+        if let Some(value) = self.components.marginer.update(
+            Some(self.components.container.position.x + self.components.container.parent.x),
+            Some(self.components.container.position.y + self.components.container.parent.y),
+            Some(self.components.container.dimension.width),
+            Some(self.components.container.dimension.height),
+            state,
+        ) {
             return Some(value);
         }
 
@@ -171,7 +181,7 @@ impl Object for DialogueBox {
     }
 
     fn get_dimension(&self) -> ObjectDimension {
-        return self.dimension.clone();
+        return self.components.container.dimension.clone();
     }
 
     fn get_parent_state(&self) -> ParentState {
@@ -179,11 +189,11 @@ impl Object for DialogueBox {
     }
 
     fn get_position(&self) -> ObjectPosition {
-        return self.position.clone();
+        return self.components.container.position.clone();
     }
 
     fn set_dimension_ref(&mut self, value: ObjectDimension) {
-        self.dimension = value;
+        self.components.container.dimension = value;
     }
 
     fn set_parent_state_ref(&mut self, value: ParentState) {
@@ -191,6 +201,6 @@ impl Object for DialogueBox {
     }
 
     fn set_position_ref(&mut self, value: ObjectPosition) {
-        self.position = value;
+        self.components.container.position = value;
     }
 }

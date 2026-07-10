@@ -155,6 +155,10 @@ impl Object for Text {
         return None;
     }
 
+    // when Text's width set to dynamic, its wrap width limit will set based on the dynamics
+    // if the width_dyn is set to None, the width will depends on the text's length, and it's not going to wrapped
+    //
+    //
     fn update_dimension(&mut self) {
         let mut current_dimension = self.get_dimension();
         let text_dimension = measure_text(

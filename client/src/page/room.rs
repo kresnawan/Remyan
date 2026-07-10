@@ -6,7 +6,10 @@ use macroquad::{
 };
 use remyan_core::Player;
 
-use crate::ui::{config::dimension::DynamicDimension::Full, widgets::{button::Button, text::HEADING_5}};
+use crate::ui::{
+    config::dimension::DynamicDimension::Full,
+    widgets::{button::Button, text::HEADING_5},
+};
 
 use crate::{
     page::{Page, Pages},
@@ -80,7 +83,8 @@ fn load_room_objects() -> Box<dyn Object> {
     let mut quit_room_dialog = DialogueBox::new(
         ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
         ObjectDimension::absolute(800.0, 400.0),
-        DialogueBoxState::new(
+        RectangleConfig::new(
+            5.0,
             Gradient::new(0.0, vec![Color::from_hex(0x2e2e2e)]),
             2.0,
             Color::from_hex(0x5e5e5e),
@@ -202,7 +206,8 @@ fn load_room_objects() -> Box<dyn Object> {
     let player_slot_1 = PlayerSlot::new(
         ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::End),
         ObjectDimension::dynamic(DynamicDimension::Percent(25.0), DynamicDimension::Full),
-    ).set_player(format!("Kresnawan"));
+    )
+    .set_player(format!("Kresnawan"));
 
     let player_slot_2 = PlayerSlot::new(
         ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::End),

@@ -3,9 +3,9 @@ use macroquad::{color::Color, shapes::draw_rectangle};
 use crate::{state::State, ui::{config::{dimension::ObjectDimension, parent::ParentState, position::ObjectPosition}, traits::object::Object}};
 
 pub struct Container {
-    position: ObjectPosition,
-    dimension: ObjectDimension,
-    parent: ParentState,
+    pub position: ObjectPosition,
+    pub dimension: ObjectDimension,
+    pub parent: ParentState,
     is_flex: bool,
     flex_gap: f32,
     pub objects: Vec<Box<dyn Object>>,

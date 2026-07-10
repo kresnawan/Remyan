@@ -8,8 +8,9 @@ use crate::ui::config::gradient::Gradient;
 use crate::ui::config::position::DynamicPosition::{Center, Custom, End, Start};
 use crate::ui::widgets::button::Button;
 
-use crate::ui::widgets::dialogue_box::{DialogueBox, DialogueBoxState};
-use crate::ui::widgets::text::{HEADING_1, HEADING_2, HEADING_3, HEADING_4, Text, TextConfig};
+use crate::ui::widgets::dialogue_box::{DialogueBox};
+use crate::ui::widgets::rectangle::RectangleConfig;
+use crate::ui::widgets::text::{HEADING_1, HEADING_2, Text, TextConfig};
 use crate::ui::widgets::text_input::TextInput;
 use crate::{
     page::{Page, Pages},
@@ -90,6 +91,7 @@ impl MainMenu {
             ObjectPosition::dynamic(Center, Center),
             ObjectDimension::absolute(300.0, 100.0),
             TextConfig::new(Nunito::regular(), WHITE, HEADING_2),
+            RectangleConfig::new(5.0, Gradient::new(0.0, vec![BLACK]), 2.0, WHITE),
         );
 
         let join_room_dialogue_middle_wrapper = Container::new(
@@ -97,20 +99,23 @@ impl MainMenu {
             ObjectDimension::dynamic(Full, Percent(60.0)),
             ParentState::new(),
             None,
-        ).add_child(Box::new(room_code_input));
+        )
+        .add_child(Box::new(room_code_input));
 
         let cancel_btn = RegularButton::new(
             ObjectPosition::absolute(0.0, 0.0),
             ButtonConfig::default("Batal"),
         )
         .set_dimensions(ObjectDimension::new(0.0, 0.0, None, Some(Full)))
-        .on_click(|| return Some(State::CloseDialogueBox(2))).set_is_on_dialogue();
+        .on_click(|| return Some(State::CloseDialogueBox(2)))
+        .set_is_on_dialogue();
 
         let join_btn = RegularButton::new(
             ObjectPosition::absolute(0.0, 0.0),
             ButtonConfig::default("Masuk"),
         )
-        .set_dimensions(ObjectDimension::new(0.0, 0.0, None, Some(Full))).set_is_on_dialogue();
+        .set_dimensions(ObjectDimension::new(0.0, 0.0, None, Some(Full)))
+        .set_is_on_dialogue();
 
         let join_room_dialogue_bottom_wrapper = Container::new(
             ObjectPosition::dynamic(Center, End),
@@ -125,7 +130,8 @@ impl MainMenu {
         let mut join_room_dialogue = DialogueBox::new(
             ObjectPosition::dynamic(Center, Center),
             ObjectDimension::absolute(800.0, 500.0),
-            DialogueBoxState::new(
+            RectangleConfig::new(
+                5.0,
                 Gradient::new(0.0, vec![Color::from_hex(0x181d30)]),
                 2.0,
                 Color::from_hex(0x242b45),
