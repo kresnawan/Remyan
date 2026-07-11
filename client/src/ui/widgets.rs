@@ -6,3 +6,4 @@ pub mod text;
 pub mod rectangle;
 pub mod player_slot;
 pub mod plus;
+pub mod switch_button;

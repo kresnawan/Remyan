@@ -200,43 +200,6 @@ impl Object for PlayerSlot {
 
     fn set_dimension_ref(&mut self, value: ObjectDimension) {
         self.dimension = value;
-
-        // because PlayerSlot in the Room page is displayed as flex, its width is assigned by
-        // its container, when its container set its width, and position, we also need to update its childs
-        // this applies to its position as well on set_position_ref()
-        //
-        //
-        self.plus.update(
-            Some(self.position.x + self.parent.x),
-            Some(self.position.y + self.parent.y),
-            Some(self.dimension.width),
-            Some(self.dimension.height),
-            &None,
-        );
-
-        self.player_name.update(
-            Some(self.position.x + self.parent.x),
-            Some(self.position.y + self.parent.y),
-            Some(self.dimension.width),
-            Some(self.dimension.height),
-            &None,
-        );
-
-        self.rec_fill.update(
-            Some(self.position.x + self.parent.x),
-            Some(self.position.y + self.parent.y),
-            Some(self.dimension.width),
-            Some(self.dimension.height),
-            &None,
-        );
-
-        self.rec_outline.update(
-            Some(self.position.x + self.parent.x),
-            Some(self.position.y + self.parent.y),
-            Some(self.dimension.width),
-            Some(self.dimension.height),
-            &None,
-        );
     }
 
     fn set_parent_state_ref(&mut self, value: ParentState) {
@@ -245,41 +208,5 @@ impl Object for PlayerSlot {
 
     fn set_position_ref(&mut self, value: ObjectPosition) {
         self.position = value;
-
-        // here, we update player slots' childs as its position is assigned
-        // by its container directly and not from update() method
-        //
-        //
-        self.plus.update(
-            Some(self.position.x + self.parent.x),
-            Some(self.position.y + self.parent.y),
-            Some(self.dimension.width),
-            Some(self.dimension.height),
-            &None,
-        );
-
-        self.player_name.update(
-            Some(self.position.x + self.parent.x),
-            Some(self.position.y + self.parent.y),
-            Some(self.dimension.width),
-            Some(self.dimension.height),
-            &None,
-        );
-
-        self.rec_fill.update(
-            Some(self.position.x + self.parent.x),
-            Some(self.position.y + self.parent.y),
-            Some(self.dimension.width),
-            Some(self.dimension.height),
-            &None,
-        );
-
-        self.rec_outline.update(
-            Some(self.position.x + self.parent.x),
-            Some(self.position.y + self.parent.y),
-            Some(self.dimension.width),
-            Some(self.dimension.height),
-            &None,
-        );
     }
 }

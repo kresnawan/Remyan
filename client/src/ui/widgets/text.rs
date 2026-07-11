@@ -187,6 +187,9 @@ impl Object for Text {
                     );
                     current_dimension.width = res;
                 }
+                DynamicDimension::Flex => {
+                    current_dimension.width = parent_state.width;
+                }
             }
 
             self.set_dimension_ref(current_dimension);

@@ -41,7 +41,7 @@ pub fn draw_rectangle_extended(
         normal: vec4(0.0, 0.0, 1.0, 0.0),
     });
 
-    let segments = 12;
+    let segments = 16;
 
     let mut add_corner_arc = |cx: f32, cy: f32, start_angle: f32, end_angle: f32| {
         for i in 0..=segments {

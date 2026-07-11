@@ -31,7 +31,8 @@ pub enum DynamicPosition {
     Start,
     Center,
     End,
-    Custom(Arc<dyn Fn(f32, f32, f32, f32) -> f32>)
+    Custom(Arc<dyn Fn(f32, f32, f32, f32) -> f32>),
+    Flex
 }
 
 #[derive(Clone)]
