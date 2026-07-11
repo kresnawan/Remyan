@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use macroquad::prelude::*;
 
-use crate::ui::config::dimension::DynamicDimension::{Full, Percent};
 use crate::ui::config::font::Nunito;
 use crate::ui::config::gradient::Gradient;
 use crate::ui::config::position::DynamicPosition::{Center, Custom, End, Start};
 use crate::ui::widgets::button::Button;
 
-use crate::ui::widgets::dialogue_box::{DialogueBox};
+use crate::ui::widgets::container::Flex;
+use crate::ui::widgets::dialogue_box::DialogueBox;
 use crate::ui::widgets::rectangle::RectangleConfig;
 use crate::ui::widgets::text::{HEADING_1, HEADING_2, Text, TextConfig};
 use crate::ui::widgets::text_input::TextInput;
@@ -22,10 +22,7 @@ use crate::{
             position::{DynamicPosition, ObjectPosition},
         },
         traits::object::Object,
-        widgets::{
-            button::{ButtonConfig, regular_button::RegularButton},
-            container::Container,
-        },
+        widgets::{button::regular_button::RegularButton, container::Container},
     },
     wrapper::draw::draw_rectangle_extended,
 };
@@ -37,17 +34,38 @@ pub struct MainMenu {
 
 impl MainMenu {
     pub fn new(player_name: &str) -> MainMenu {
+        let top_container = Container::new(
+            ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Start),
+            ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Percent(50.0)),
+            ParentState::new(),
+            None,
+        );
+
         let create_room_btn = RegularButton::new(
-            ObjectPosition::absolute(0.0, 0.0),
-            ButtonConfig::default("Buat Room"),
+            ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Start),
+            Some(ObjectDimension::dynamic(
+                DynamicDimension::Full,
+                DynamicDimension::Flex,
+            )),
+            "Buat Room",
+            TextConfig::default(),
+            RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
+            6.0,
         )
         .on_click(|| return Some(State::MovePage(Pages::Room)))
         .set_padding(0.0, 50.0)
         .set_alignment(Some(DynamicPosition::Center), None);
 
         let join_room_btn = RegularButton::new(
-            ObjectPosition::absolute(0.0, 150.0),
-            ButtonConfig::default("Masuk Room"),
+            ObjectPosition::absolute(0.0, 200.0),
+            Some(ObjectDimension::dynamic(
+                DynamicDimension::Full,
+                DynamicDimension::Flex,
+            )),
+            "Gabung Room",
+            TextConfig::default(),
+            RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
+            6.0,
         )
         .on_click(|| {
             return Some(State::OpenDialogueBox(2));
@@ -56,8 +74,15 @@ impl MainMenu {
         .set_alignment(Some(DynamicPosition::Center), None);
 
         let settings_btn = RegularButton::new(
-            ObjectPosition::absolute(0.0, 150.0 * 2.0),
-            ButtonConfig::default("Pengaturan"),
+            ObjectPosition::absolute(0.0, 400.0),
+            Some(ObjectDimension::dynamic(
+                DynamicDimension::Full,
+                DynamicDimension::Flex,
+            )),
+            "Pengaturan",
+            TextConfig::default(),
+            RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
+            6.0,
         )
         .on_click(|| {
             return None;
@@ -65,15 +90,25 @@ impl MainMenu {
         .set_padding(0.0, 50.0)
         .set_alignment(Some(DynamicPosition::Center), None);
 
-        let div = Container::new(
-            ObjectPosition::absolute(0.0, 500.0),
-            ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Full),
+        let bottom_container = Container::new(
+            ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::End),
+            ObjectDimension::dynamic(DynamicDimension::Percent(50.0), DynamicDimension::Percent(50.0)),
             ParentState::new(),
             None,
         )
         .add_child(Box::new(create_room_btn))
         .add_child(Box::new(join_room_btn))
-        .add_child(Box::new(settings_btn));
+        .add_child(Box::new(settings_btn))
+        .set_is_flex(Flex::Y, 30.0);
+
+        let container = Container::new(
+            ObjectPosition::absolute(0.0, 0.0),
+            ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Full),
+            ParentState::new(),
+            None,
+        )
+        .add_child(Box::new(top_container))
+        .add_child(Box::new(bottom_container)).set_padding(90.0, 90.0);
 
         let join_room_text = Text::new("Masuk Room")
             .set_config(TextConfig::new(Nunito::bold(), WHITE, HEADING_1))
@@ -81,7 +116,7 @@ impl MainMenu {
 
         let join_room_dialogue_top_wrapper = Container::new(
             ObjectPosition::dynamic(Center, Start),
-            ObjectDimension::dynamic(Full, Percent(20.0)),
+            ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Percent(20.0)),
             ParentState::new(),
             None,
         )
@@ -96,36 +131,54 @@ impl MainMenu {
 
         let join_room_dialogue_middle_wrapper = Container::new(
             ObjectPosition::dynamic(Center, Custom(Arc::new(|_, _, _, ph| ph * 0.2))),
-            ObjectDimension::dynamic(Full, Percent(60.0)),
+            ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Percent(60.0)),
             ParentState::new(),
             None,
         )
         .add_child(Box::new(room_code_input));
 
         let cancel_btn = RegularButton::new(
-            ObjectPosition::absolute(0.0, 0.0),
-            ButtonConfig::default("Batal"),
+            ObjectPosition::dynamic(DynamicPosition::Flex, DynamicPosition::Center),
+            None,
+            "Batal",
+            TextConfig::default(),
+            RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
+            6.0,
         )
-        .set_dimensions(ObjectDimension::new(0.0, 0.0, None, Some(Full)))
+        .set_dimensions(ObjectDimension::new(
+            0.0,
+            0.0,
+            Some(DynamicDimension::Flex),
+            Some(DynamicDimension::Full),
+        ))
         .on_click(|| return Some(State::CloseDialogueBox(2)))
         .set_is_on_dialogue();
 
         let join_btn = RegularButton::new(
-            ObjectPosition::absolute(0.0, 0.0),
-            ButtonConfig::default("Masuk"),
+            ObjectPosition::dynamic(DynamicPosition::Flex, DynamicPosition::Center),
+            None,
+            "Masuk",
+            TextConfig::default(),
+            RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
+            6.0,
         )
-        .set_dimensions(ObjectDimension::new(0.0, 0.0, None, Some(Full)))
+        .set_dimensions(ObjectDimension::new(
+            0.0,
+            0.0,
+            Some(DynamicDimension::Flex),
+            Some(DynamicDimension::Full),
+        ))
         .set_is_on_dialogue();
 
         let join_room_dialogue_bottom_wrapper = Container::new(
             ObjectPosition::dynamic(Center, End),
-            ObjectDimension::dynamic(Full, Percent(20.0)),
+            ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Percent(20.0)),
             ParentState::new(),
             None,
         )
         .add_child(Box::new(cancel_btn))
         .add_child(Box::new(join_btn))
-        .set_is_flex(15.0);
+        .set_is_flex(crate::ui::widgets::container::Flex::X, 15.0);
 
         let mut join_room_dialogue = DialogueBox::new(
             ObjectPosition::dynamic(Center, Center),
@@ -145,7 +198,7 @@ impl MainMenu {
 
         return MainMenu {
             player_name: String::from(player_name),
-            objects: vec![Box::new(div), Box::new(join_room_dialogue)],
+            objects: vec![Box::new(container), Box::new(join_room_dialogue)],
         };
     }
 }

@@ -1,14 +1,15 @@
 use std::sync::Arc;
 
 use macroquad::{
-    color::{BLACK, Color, WHITE},
+    color::{BLACK, BLANK, Color, WHITE},
     window::{screen_height, screen_width},
 };
 use remyan_core::Player;
 
 use crate::ui::{
-    config::dimension::DynamicDimension::Full,
-    widgets::{button::Button, text::HEADING_5},
+    config::dimension::DynamicDimension, widgets::{
+        button::Button, container::Flex, text::{HEADING_5, TextConfig},
+    },
 };
 
 use crate::{
@@ -16,7 +17,7 @@ use crate::{
     state::State,
     ui::{
         config::{
-            dimension::{DynamicDimension, ObjectDimension},
+            dimension::{ObjectDimension},
             font::Nunito,
             gradient::Gradient,
             parent::ParentState,
@@ -24,7 +25,7 @@ use crate::{
         },
         traits::object::Object,
         widgets::{
-            button::{ButtonConfig, regular_button::RegularButton},
+            button::regular_button::RegularButton,
             container::Container,
             dialogue_box::{DialogueBox, DialogueBoxState},
             player_slot::PlayerSlot,
@@ -151,39 +152,33 @@ fn load_room_objects() -> Box<dyn Object> {
 
     let start_game_btn = RegularButton::new(
         ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Start),
-        ButtonConfig::default("Mulai Game"),
+        None,
+        "Mulai Game",
+        TextConfig::default(),
+        RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
+        6.0,
     )
     .on_click(|| return Some(State::MovePage(Pages::MainMenu)))
     .set_padding(100.0, 50.0);
 
     let room_config_btn = RegularButton::new(
         ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::Start),
-        ButtonConfig::new(
-            "Konfigurasi",
-            HEADING_5,
-            Gradient::gray(),
-            10.0,
-            0.0,
-            WHITE,
-            BLACK,
-            Nunito::black(),
-        ),
+        None,
+        "Konfigurasi",
+        TextConfig::default(),
+        RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
+        6.0,
     )
     .on_click(|| return Some(State::MovePage(Pages::MainMenu)))
     .set_padding(75.0, 25.0);
 
     let left_room_btn = RegularButton::new(
         ObjectPosition::dynamic(DynamicPosition::End, DynamicPosition::Start),
-        ButtonConfig::new(
-            "Keluar",
-            HEADING_5,
-            Gradient::danger(),
-            10.0,
-            0.0,
-            WHITE,
-            BLACK,
-            Nunito::black(),
-        ),
+        None,
+        "Keluar",
+        TextConfig::default(),
+        RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
+        6.0,
     )
     .on_click(|| return Some(State::OpenDialogueBox(1)))
     .set_padding(75.0, 25.0);
@@ -204,24 +199,24 @@ fn load_room_objects() -> Box<dyn Object> {
     );
 
     let player_slot_1 = PlayerSlot::new(
-        ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::End),
-        ObjectDimension::dynamic(DynamicDimension::Percent(25.0), DynamicDimension::Full),
+        ObjectPosition::dynamic(DynamicPosition::Flex, DynamicPosition::Center),
+        ObjectDimension::dynamic(DynamicDimension::Flex, DynamicDimension::Full),
     )
     .set_player(format!("Kresnawan"));
 
     let player_slot_2 = PlayerSlot::new(
-        ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::End),
-        ObjectDimension::dynamic(DynamicDimension::Percent(25.0), DynamicDimension::Full),
+        ObjectPosition::dynamic(DynamicPosition::Flex, DynamicPosition::Center),
+        ObjectDimension::dynamic(DynamicDimension::Flex, DynamicDimension::Full),
     );
 
     let player_slot_3 = PlayerSlot::new(
-        ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::End),
-        ObjectDimension::dynamic(DynamicDimension::Percent(25.0), DynamicDimension::Full),
+        ObjectPosition::dynamic(DynamicPosition::Flex, DynamicPosition::Center),
+        ObjectDimension::dynamic(DynamicDimension::Flex, DynamicDimension::Full),
     );
 
     let player_slot_4 = PlayerSlot::new(
-        ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::End),
-        ObjectDimension::dynamic(DynamicDimension::Percent(25.0), DynamicDimension::Full),
+        ObjectPosition::dynamic(DynamicPosition::Flex, DynamicPosition::Center),
+        ObjectDimension::dynamic(DynamicDimension::Flex, DynamicDimension::Full),
     );
 
     let quit_room_dialog_heading = Text::new("Keluar Dari Room?")
@@ -239,37 +234,27 @@ fn load_room_objects() -> Box<dyn Object> {
             .set_position(ObjectPosition::new(0.0, 60.0, Some(DynamicPosition::Center), None));
 
     let y_btn = RegularButton::new(
-        ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::Start),
-        ButtonConfig::new(
-            "Ya",
-            HEADING_5,
-            Gradient::gray(),
-            10.0,
-            0.0,
-            WHITE,
-            BLACK,
-            Nunito::black(),
-        ),
+        ObjectPosition::dynamic(DynamicPosition::Flex, DynamicPosition::Center),
+        None,
+        "Ya",
+        TextConfig::default(),
+        RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
+        6.0,
     )
-    .set_dimensions(ObjectDimension::new(0.0, 0.0, None, Some(Full)))
+    .set_dimensions(ObjectDimension::new(0.0, 0.0, Some(DynamicDimension::Flex), Some(DynamicDimension::Full)))
     .on_click(|| return Some(State::MovePage(Pages::MainMenu)))
     .set_is_on_dialogue();
     // .set_padding(75.0, 25.0);
 
     let n_btn = RegularButton::new(
-        ObjectPosition::dynamic(DynamicPosition::End, DynamicPosition::Start),
-        ButtonConfig::new(
-            "Tidak",
-            HEADING_5,
-            Gradient::danger(),
-            10.0,
-            0.0,
-            WHITE,
-            BLACK,
-            Nunito::black(),
-        ),
+        ObjectPosition::dynamic(DynamicPosition::Flex, DynamicPosition::Center),
+        None,
+        "Tidak",
+        TextConfig::default(),
+        RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
+        6.0,
     )
-    .set_dimensions(ObjectDimension::new(0.0, 0.0, None, Some(Full)))
+    .set_dimensions(ObjectDimension::new(0.0, 0.0, Some(DynamicDimension::Flex), Some(DynamicDimension::Full)))
     .on_click(|| {
         return Some(State::CloseDialogueBox(1));
     })
@@ -285,7 +270,7 @@ fn load_room_objects() -> Box<dyn Object> {
 
     quit_room_dialog_btn_wrapper.add_child_ref(Box::new(y_btn));
     quit_room_dialog_btn_wrapper.add_child_ref(Box::new(n_btn));
-    quit_room_dialog_btn_wrapper.set_is_flex_ref(20.0);
+    quit_room_dialog_btn_wrapper.set_is_flex_ref(Flex::X,20.0);
 
     quit_room_dialog.add_object_ref(Box::new(quit_room_dialog_heading));
     quit_room_dialog.add_object_ref(Box::new(quit_room_dialog_p));
@@ -304,7 +289,7 @@ fn load_room_objects() -> Box<dyn Object> {
     wrapper_3_top_bottom_marginer.add_child_ref(Box::new(player_slot_2));
     wrapper_3_top_bottom_marginer.add_child_ref(Box::new(player_slot_3));
     wrapper_3_top_bottom_marginer.add_child_ref(Box::new(player_slot_4));
-    wrapper_3_top_bottom_marginer.set_is_flex_ref(25.0);
+    wrapper_3_top_bottom_marginer.set_is_flex_ref(Flex::X,25.0);
 
     wrapper_3_top_bottom.add_child_ref(Box::new(wrapper_3_top_bottom_marginer));
 
