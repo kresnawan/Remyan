@@ -5,10 +5,16 @@ use crate::{
     ui::{
         config::{dimension::ObjectDimension, parent::ParentState, position::ObjectPosition},
         traits::object::Object,
+        widgets::container::Display::{Flex, Grid},
     },
 };
 
-pub enum Flex {
+pub enum Display {
+    Flex(Direction),
+    Grid(Direction),
+}
+
+pub enum Direction {
     X,
     Y,
 }
@@ -17,11 +23,13 @@ pub struct Container {
     pub position: ObjectPosition,
     pub dimension: ObjectDimension,
     pub parent: ParentState,
-    flex: Option<Flex>,
-    flex_gap: f32,
-    padding_x: f32,
-    padding_y: f32,
-    pub objects: Vec<Box<dyn Object>>,
+    display: Option<Display>,
+    gap: f32,
+    padding_t: f32,
+    padding_r: f32,
+    padding_b: f32,
+    padding_l: f32,
+    pub objects: Vec<Box<dyn Object + Sync + Send>>,
     background_color: Option<Color>,
 }
 
@@ -37,40 +45,65 @@ impl Container {
             dimension,
             objects: Vec::new(),
             parent,
-            padding_x: 0.0,
-            padding_y: 0.0,
-            flex: None,
-            flex_gap: 0.0,
+            padding_t: 0.0,
+            padding_r: 0.0,
+            padding_b: 0.0,
+            padding_l: 0.0,
+            display: None,
+            gap: 0.0,
             background_color: color,
         };
     }
 
-    pub fn add_child(mut self, object: Box<dyn Object>) -> Container {
+    pub fn add_child(mut self, object: Box<dyn Object + Sync + Send>) -> Container {
         self.objects.push(object);
         self
     }
 
-    pub fn add_child_ref(&mut self, object: Box<dyn Object>) {
+    pub fn add_child_ref(&mut self, object: Box<dyn Object + Sync + Send>) {
         self.objects.push(object);
     }
 
-    pub fn set_is_flex(mut self, flex: Flex, gap: f32) -> Container {
-        self.flex = Some(flex);
-        self.flex_gap = gap;
+    pub fn set_is_flex(mut self, direction: Direction, gap: f32) -> Container {
+        self.display = Some(Flex(direction));
+        self.gap = gap;
+
+        return self;
+    }
+
+    pub fn set_is_grid(mut self, direction: Direction, gap: f32) -> Container {
+        self.display = Some(Grid(direction));
+        self.gap = gap;
 
         return self;
     }
 
     pub fn set_padding(mut self, padding_x: f32, padding_y: f32) -> Self {
-        self.padding_x = padding_x;
-        self.padding_y = padding_y;
-        
+        self.padding_t = padding_y;
+        self.padding_r = padding_x;
+        self.padding_b = padding_y;
+        self.padding_l = padding_x;
+
         self
     }
 
-    pub fn set_is_flex_ref(&mut self, flex: Flex, gap: f32) {
-        self.flex = Some(flex);
-        self.flex_gap = gap;
+    pub fn set_padding_all(mut self, padding_t: f32, padding_r: f32, padding_b: f32,padding_l: f32) -> Self {
+        self.padding_b = padding_b;
+        self.padding_l = padding_l;
+        self.padding_r = padding_r;
+        self.padding_t = padding_t;
+
+        self
+    }
+
+    pub fn set_is_flex_ref(&mut self, direction: Direction, gap: f32) {
+        self.display = Some(Flex(direction));
+        self.gap = gap;
+    }
+
+    pub fn set_is_grid_ref(&mut self, direction: Direction, gap: f32) {
+        self.display = Some(Grid(direction));
+        self.gap = gap;
     }
 }
 
@@ -93,62 +126,96 @@ impl Object for Container {
         self.update_dimension();
         self.update_alignment();
 
-        if let Some(flex) = &self.flex {
+        if let Some(display) = &self.display {
             let child_number = self.objects.len();
-            match flex {
-                Flex::X => {
-                    let net_width =
-                        self.dimension.width - (self.flex_gap * (child_number - 1) as f32);
-                    let child_net_width = 1.0 / child_number as f32 * net_width;
-                    let mut counter: f32 = 0.0;
+            match display {
+                Flex(dir) => match dir {
+                    Direction::X => {
+                        let mut before_width: f32 = 0.0;
 
-                    for i in &mut self.objects {
-                        let child_dimension = i.get_dimension();
-                        let child_position = i.get_position();
+                        for i in &mut self.objects {
+                            let child_dimension = i.get_dimension();
+                            let child_position = i.get_position();
 
-                        i.set_dimension_ref(ObjectDimension {
-                            width: child_net_width,
-                            ..child_dimension
-                        });
-                        i.set_position_ref(ObjectPosition {
-                            x: counter * child_net_width + (self.flex_gap * counter),
-                            ..child_position
-                        });
+                            i.set_position_ref(ObjectPosition {
+                                x: before_width,
+                                ..child_position
+                            });
 
-                        counter += 1.0;
+                            before_width += child_dimension.width + self.gap;
+                        }
                     }
-                }
-                Flex::Y => {
-                    let net_height =
-                        self.dimension.height - (self.flex_gap * (child_number - 1) as f32);
-                    let child_net_height = 1.0 / child_number as f32 * net_height;
-                    let mut counter: f32 = 0.0;
+                    Direction::Y => {
+                        let mut before_height: f32 = 0.0;
 
-                    for i in &mut self.objects {
-                        let child_dimension = i.get_dimension();
-                        let child_position = i.get_position();
+                        for i in &mut self.objects {
+                            let child_dimension = i.get_dimension();
+                            let child_position = i.get_position();
 
-                        i.set_dimension_ref(ObjectDimension {
-                            height: child_net_height,
-                            ..child_dimension
-                        });
-                        i.set_position_ref(ObjectPosition {
-                            y: counter * child_net_height + (self.flex_gap * counter),
-                            ..child_position
-                        });
+                            i.set_position_ref(ObjectPosition {
+                                y: before_height,
+                                ..child_position
+                            });
 
-                        counter += 1.0;
+                            before_height += child_dimension.height + self.gap;
+                        }
                     }
-                }
+                },
+                Grid(dir) => match dir {
+                    Direction::X => {
+                        let net_width =
+                            self.dimension.width - (self.gap * (child_number - 1) as f32);
+                        let child_net_width = 1.0 / child_number as f32 * net_width;
+                        let mut counter: f32 = 0.0;
+
+                        for i in &mut self.objects {
+                            let child_dimension = i.get_dimension();
+                            let child_position = i.get_position();
+
+                            i.set_dimension_ref(ObjectDimension {
+                                width: child_net_width,
+                                ..child_dimension
+                            });
+                            i.set_position_ref(ObjectPosition {
+                                x: counter * child_net_width + (self.gap * counter),
+                                ..child_position
+                            });
+
+                            counter += 1.0;
+                        }
+                    }
+                    Direction::Y => {
+                        let net_height =
+                            self.dimension.height - (self.gap * (child_number - 1) as f32);
+                        let child_net_height = 1.0 / child_number as f32 * net_height;
+                        let mut counter: f32 = 0.0;
+
+                        for i in &mut self.objects {
+                            let child_dimension = i.get_dimension();
+                            let child_position = i.get_position();
+
+                            i.set_dimension_ref(ObjectDimension {
+                                height: child_net_height,
+                                ..child_dimension
+                            });
+                            i.set_position_ref(ObjectPosition {
+                                y: counter * child_net_height + (self.gap * counter),
+                                ..child_position
+                            });
+
+                            counter += 1.0;
+                        }
+                    }
+                },
             }
         }
 
         for i in &mut self.objects {
             if let Some(n) = i.update(
-                Some(self.position.x + self.parent.x + self.padding_x),
-                Some(self.position.y + self.parent.y + self.padding_y),
-                Some(self.dimension.width - (self.padding_x * 2.0)),
-                Some(self.dimension.height - (self.padding_y * 2.0)),
+                Some(self.position.x + self.parent.x + self.padding_l),
+                Some(self.position.y + self.parent.y + self.padding_t),
+                Some(self.dimension.width - (self.padding_r + self.padding_l)),
+                Some(self.dimension.height - (self.padding_b + self.padding_t)),
                 state,
             ) {
                 return Some(n);

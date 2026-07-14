@@ -5,21 +5,16 @@ use macroquad::input::{
 };
 
 use crate::{
-    state::State,
-    ui::{
+    state::State, ui::{
         config::{
             dimension::{
                 DynamicDimension::{Custom, Full},
                 ObjectDimension,
-            },
-            parent::ParentState,
-            position::{
+            }, font::Nunito, parent::ParentState, position::{
                 DynamicPosition::{Center, Start},
                 ObjectPosition,
             },
-        },
-        traits::{click::Clickable, hover::Hoverable, object::Object, press::Pressable},
-        widgets::{
+        }, traits::{click::Clickable, hover::Hoverable, object::Object, press::Pressable}, widgets::{
             container::Container,
             rectangle::{Rectangle, RectangleConfig},
             text::{Text, TextConfig},
@@ -64,6 +59,7 @@ impl TextInput {
         dimension: ObjectDimension,
         text_config: TextConfig,
         background_config: RectangleConfig,
+        font: Arc<Nunito>
     ) -> Self {
         let container = Container::new(position, dimension, ParentState::new(), None);
 
@@ -84,7 +80,7 @@ impl TextInput {
             background_config,
         );
 
-        let text = Text::new("")
+        let text = Text::new("", font)
             .set_config(text_config)
             .set_position(ObjectPosition::dynamic(Start, Center))
             .wrap_text();
@@ -147,7 +143,7 @@ impl Object for TextInput {
             self.state.is_focused = true
         }
 
-        if let Some(c) = get_char_pressed() {
+        while let Some(c) = get_char_pressed() {
             if self.state.is_focused {
                 if c.is_ascii_graphic() || c == ' ' {
                     self.components.text.value.push(c);

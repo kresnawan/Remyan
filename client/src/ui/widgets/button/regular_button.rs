@@ -1,22 +1,17 @@
+use std::sync::Arc;
+
 use macroquad::prelude::*;
 
 use crate::{
-    state::State,
-    ui::{
+    state::State, ui::{
         config::{
-            dimension::ObjectDimension,
-            gradient::Gradient,
-            parent::ParentState,
-            position::{DynamicPosition::Center, ObjectPosition},
-        },
-        traits::{click::Clickable, hover::Hoverable, object::Object, press::Pressable},
-        widgets::{
+            dimension::ObjectDimension, font::Nunito, gradient::Gradient, parent::ParentState, position::{DynamicPosition::Center, ObjectPosition},
+        }, traits::{click::Clickable, hover::Hoverable, object::Object, press::Pressable}, widgets::{
             button::{Button, ButtonState},
             rectangle::{Rectangle, RectangleConfig},
             text::{Text, TextConfig},
         },
     },
-    wrapper::draw::draw_rectangle_extended,
 };
 
 pub struct RegularButtonComponents {
@@ -30,8 +25,12 @@ pub struct RegularButton {
     components: RegularButtonComponents,
     state: ButtonState,
     is_on_dialogue: bool,
+    dialogue_id: Option<u8>,
     shadow_offset: f32,
 }
+
+unsafe impl Sync for RegularButton {}
+unsafe impl Send for RegularButton {}
 
 impl RegularButton {
     pub fn set_padding(mut self, x: f32, y: f32) -> Self {
@@ -55,8 +54,9 @@ impl RegularButton {
         self
     }
 
-    pub fn set_is_on_dialogue(mut self) -> Self {
+    pub fn set_is_on_dialogue(mut self, id: u8) -> Self {
         self.is_on_dialogue = true;
+        self.dialogue_id = Some(id);
         self
     }
 }
@@ -105,9 +105,15 @@ impl Object for RegularButton {
         //
         if let Some(state) = state {
             match state {
-                State::OpenDialogueBox(_) => {
+                State::OpenDialogueBox(id) => {
                     if !self.is_on_dialogue {
                         self.state.is_hovered = false;
+                    } else {
+                        if let Some(n) = self.dialogue_id {
+                            if *id != n {
+                                self.state.is_hovered = false;
+                            }
+                        }
                     }
                 }
 
@@ -133,8 +139,6 @@ impl Object for RegularButton {
                 }
             }
         }
-
-        
 
         return None;
     }
@@ -180,6 +184,7 @@ impl Button for RegularButton {
         text_config: TextConfig,
         background_config: RectangleConfig,
         shadow_offset: f32,
+        font: Arc<Nunito>
     ) -> Self {
         let dimension = if let Some(value) = dimension {
             value
@@ -204,7 +209,7 @@ impl Button for RegularButton {
             ParentState::new(),
             background_config.clone(),
         );
-        let text = Text::new(text).set_position(ObjectPosition::dynamic(Center, Center));
+        let text = Text::new(text, font).set_position(ObjectPosition::dynamic(Center, Center));
         let shadow = Rectangle::new(
             position,
             dimension,
@@ -227,6 +232,7 @@ impl Button for RegularButton {
             state: ButtonState::new(),
             is_on_dialogue: false,
             shadow_offset,
+            dialogue_id: None
         }
     }
 

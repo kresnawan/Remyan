@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use macroquad::{
     color::{Color, WHITE},
     text::{Font, TextParams, measure_text},
@@ -28,23 +30,23 @@ pub const HEADING_8: f32 = 6.0;
 
 #[derive(Clone)]
 pub struct TextConfig {
-    pub font: Font,
+    pub font: Arc<Font>,
     pub color: Color,
     pub font_size: f32,
     pub is_shown: bool,
 }
 
 impl TextConfig {
-    pub fn default() -> Self {
+    pub fn default(font: Arc<Nunito>) -> Self {
         TextConfig {
-            font: Nunito::regular(),
+            font: font.regular.clone(),
             color: WHITE,
             font_size: HEADING_3,
             is_shown: true,
         }
     }
 
-    pub fn new(font: Font, color: Color, font_size: f32) -> Self {
+    pub fn new(font: Arc<Font>, color: Color, font_size: f32) -> Self {
         TextConfig {
             font,
             color,
@@ -63,15 +65,15 @@ pub struct Text {
 }
 
 impl Text {
-    pub fn new(value: &str) -> Text {
-        let config = TextConfig::default();
+    pub fn new(value: &str, font: Arc<Nunito>) -> Text {
+        let config = TextConfig::default(font);
         let text_dimensions = measure_text(value, Some(&config.font), config.font_size as u16, 1.0);
         Text {
             position: ObjectPosition::absolute(0.0, 0.0),
             dimension: ObjectDimension::absolute(text_dimensions.width, text_dimensions.height),
             parent: ParentState::new(),
             value: String::from(value),
-            config: TextConfig::default(),
+            config,
         }
     }
 
@@ -187,7 +189,7 @@ impl Object for Text {
                     );
                     current_dimension.width = res;
                 }
-                DynamicDimension::Flex => {
+                DynamicDimension::Grid => {
                     current_dimension.width = parent_state.width;
                 }
             }

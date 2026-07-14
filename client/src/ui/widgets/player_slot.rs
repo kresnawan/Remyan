@@ -1,19 +1,15 @@
+use std::sync::Arc;
+
 use macroquad::color::{BLANK, Color};
 
 use crate::{
-    state::State,
-    ui::{
+    state::State, ui::{
         config::{
-            dimension::{DynamicDimension::Full, ObjectDimension},
-            gradient::Gradient,
-            parent::ParentState,
-            position::{
+            dimension::{DynamicDimension::Full, ObjectDimension}, font::Nunito, gradient::Gradient, parent::ParentState, position::{
                 DynamicPosition::{self, Center},
                 ObjectPosition,
             },
-        },
-        traits::object::Object,
-        widgets::{
+        }, traits::object::Object, widgets::{
             plus::{Plus, PlusAttribute},
             rectangle::{Rectangle, RectangleConfig},
             text::Text,
@@ -51,7 +47,7 @@ pub struct PlayerSlot {
 }
 
 impl PlayerSlot {
-    pub fn new(position: ObjectPosition, dimension: ObjectDimension) -> PlayerSlot {
+    pub fn new(position: ObjectPosition, dimension: ObjectDimension, font: Arc<Nunito>) -> PlayerSlot {
         let plus = Plus::new(
             ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
             PlusAttribute::default(),
@@ -80,7 +76,7 @@ impl PlayerSlot {
             ),
         );
 
-        let player_name = Text::new("")
+        let player_name = Text::new("", font)
             .set_position(ObjectPosition::dynamic(Center, Center))
             .set_dimension(ObjectDimension::new(0.0, 0.0, None, Some(Full)));
 

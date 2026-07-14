@@ -102,7 +102,7 @@ impl DialogueBox {
         self.state.is_shown = true;
     }
 
-    pub fn add_object_ref(&mut self, object: Box<dyn Object>) {
+    pub fn add_object_ref(&mut self, object: Box<dyn Object + Sync + Send>) {
         self.components.marginer.add_child_ref(object);
     }
 }

@@ -59,6 +59,9 @@ impl SwitchButton {
     }
 }
 
+unsafe impl Sync for SwitchButton {}
+unsafe impl Send for SwitchButton {}
+
 impl Object for SwitchButton {
     fn as_any(&self) -> &dyn std::any::Any {
         self

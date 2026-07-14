@@ -1,14 +1,23 @@
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    mpsc::{Receiver, Sender, channel},
+};
 
 use macroquad::{
     color::{BLACK, BLANK, Color, WHITE},
-    window::{screen_height, screen_width},
+    experimental::coroutines::start_coroutine,
+    window::{next_frame, screen_height, screen_width},
 };
+use quad_net::http_request::{Method, Request, RequestBuilder};
 use remyan_core::Player;
 
 use crate::ui::{
-    config::dimension::DynamicDimension, widgets::{
-        button::Button, container::Flex, text::{HEADING_5, TextConfig},
+    config::dimension::DynamicDimension,
+    widgets::{
+        button::Button,
+        container::Direction,
+        switch_button::SwitchButton,
+        text::{HEADING_5, TextConfig},
     },
 };
 
@@ -17,7 +26,7 @@ use crate::{
     state::State,
     ui::{
         config::{
-            dimension::{ObjectDimension},
+            dimension::ObjectDimension,
             font::Nunito,
             gradient::Gradient,
             parent::ParentState,
@@ -27,7 +36,7 @@ use crate::{
         widgets::{
             button::regular_button::RegularButton,
             container::Container,
-            dialogue_box::{DialogueBox, DialogueBoxState},
+            dialogue_box::DialogueBox,
             player_slot::PlayerSlot,
             rectangle::{Rectangle, RectangleConfig},
             text::{HEADING_2, Text},
@@ -38,15 +47,16 @@ use crate::{
 
 pub struct Room {
     players: Vec<Player>,
-    objects: Vec<Box<dyn Object>>,
+    objects: Vec<Box<dyn Object + Send>>,
 }
 
 impl Room {
-    pub fn new() -> Self {
-        let wrapper = load_room_objects();
+    pub fn new(font: Arc<Nunito>) -> Self {
+        let wrapper = load_room_objects(font.clone());
+        let dialogue = load_config_dialogue(font.clone());
         Self {
             players: Vec::new(),
-            objects: vec![wrapper],
+            objects: vec![wrapper, dialogue],
         }
     }
 }
@@ -80,7 +90,7 @@ impl Page for Room {
     }
 }
 
-fn load_room_objects() -> Box<dyn Object> {
+fn load_room_objects(font: Arc<Nunito>) -> Box<dyn Object + Send> {
     let mut quit_room_dialog = DialogueBox::new(
         ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
         ObjectDimension::absolute(800.0, 400.0),
@@ -93,7 +103,7 @@ fn load_room_objects() -> Box<dyn Object> {
         1,
     );
 
-    let mut room_code = Text::new("Kode Room: 2919391379919339557");
+    let mut room_code = Text::new("Kode Room: 2919391379919339557", font.clone());
 
     let mut wrapper_3_top_top = Container::new(
         ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Start),
@@ -154,9 +164,10 @@ fn load_room_objects() -> Box<dyn Object> {
         ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Start),
         None,
         "Mulai Game",
-        TextConfig::default(),
+        TextConfig::default(font.clone()),
         RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
         6.0,
+        font.clone()
     )
     .on_click(|| return Some(State::MovePage(Pages::MainMenu)))
     .set_padding(100.0, 50.0);
@@ -165,20 +176,22 @@ fn load_room_objects() -> Box<dyn Object> {
         ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::Start),
         None,
         "Konfigurasi",
-        TextConfig::default(),
+        TextConfig::default(font.clone()),
         RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
         6.0,
+        font.clone()
     )
-    .on_click(|| return Some(State::MovePage(Pages::MainMenu)))
+    .on_click(|| return Some(State::OpenDialogueBox(3)))
     .set_padding(75.0, 25.0);
 
     let left_room_btn = RegularButton::new(
         ObjectPosition::dynamic(DynamicPosition::End, DynamicPosition::Start),
         None,
         "Keluar",
-        TextConfig::default(),
+        TextConfig::default(font.clone()),
         RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
         6.0,
+        font.clone()
     )
     .on_click(|| return Some(State::OpenDialogueBox(1)))
     .set_padding(75.0, 25.0);
@@ -199,27 +212,31 @@ fn load_room_objects() -> Box<dyn Object> {
     );
 
     let player_slot_1 = PlayerSlot::new(
-        ObjectPosition::dynamic(DynamicPosition::Flex, DynamicPosition::Center),
-        ObjectDimension::dynamic(DynamicDimension::Flex, DynamicDimension::Full),
+        ObjectPosition::dynamic(DynamicPosition::Grid, DynamicPosition::Center),
+        ObjectDimension::dynamic(DynamicDimension::Grid, DynamicDimension::Full),
+        font.clone()
     )
     .set_player(format!("Kresnawan"));
 
     let player_slot_2 = PlayerSlot::new(
-        ObjectPosition::dynamic(DynamicPosition::Flex, DynamicPosition::Center),
-        ObjectDimension::dynamic(DynamicDimension::Flex, DynamicDimension::Full),
+        ObjectPosition::dynamic(DynamicPosition::Grid, DynamicPosition::Center),
+        ObjectDimension::dynamic(DynamicDimension::Grid, DynamicDimension::Full),
+        font.clone()
     );
 
     let player_slot_3 = PlayerSlot::new(
-        ObjectPosition::dynamic(DynamicPosition::Flex, DynamicPosition::Center),
-        ObjectDimension::dynamic(DynamicDimension::Flex, DynamicDimension::Full),
+        ObjectPosition::dynamic(DynamicPosition::Grid, DynamicPosition::Center),
+        ObjectDimension::dynamic(DynamicDimension::Grid, DynamicDimension::Full),
+        font.clone()
     );
 
     let player_slot_4 = PlayerSlot::new(
-        ObjectPosition::dynamic(DynamicPosition::Flex, DynamicPosition::Center),
-        ObjectDimension::dynamic(DynamicDimension::Flex, DynamicDimension::Full),
+        ObjectPosition::dynamic(DynamicPosition::Grid, DynamicPosition::Center),
+        ObjectDimension::dynamic(DynamicDimension::Grid, DynamicDimension::Full),
+        font.clone()
     );
 
-    let quit_room_dialog_heading = Text::new("Keluar Dari Room?")
+    let quit_room_dialog_heading = Text::new("Keluar Dari Room?", font.clone())
         .set_position(ObjectPosition::dynamic(
             DynamicPosition::Center,
             DynamicPosition::Start,
@@ -227,38 +244,50 @@ fn load_room_objects() -> Box<dyn Object> {
         .set_font_size(HEADING_2);
 
     let quit_room_dialog_p = Text::new(
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum et tincidunt arcu. Curabitur libero sapien, tristique nec elementum sed, rhoncus sed sapien. Donec ut urna at sem aliquet tempor ac et tortor.",
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum et tincidunt arcu. Curabitur libero sapien, tristique nec elementum sed, rhoncus sed sapien. Donec ut urna at sem aliquet tempor ac et tortor.", font.clone()
         )
             .wrap_text()
             .set_font_size(HEADING_5)
             .set_position(ObjectPosition::new(0.0, 60.0, Some(DynamicPosition::Center), None));
 
     let y_btn = RegularButton::new(
-        ObjectPosition::dynamic(DynamicPosition::Flex, DynamicPosition::Center),
+        ObjectPosition::dynamic(DynamicPosition::Grid, DynamicPosition::Center),
         None,
         "Ya",
-        TextConfig::default(),
+        TextConfig::default(font.clone()),
         RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
         6.0,
+        font.clone()
     )
-    .set_dimensions(ObjectDimension::new(0.0, 0.0, Some(DynamicDimension::Flex), Some(DynamicDimension::Full)))
+    .set_dimensions(ObjectDimension::new(
+        0.0,
+        0.0,
+        Some(DynamicDimension::Grid),
+        Some(DynamicDimension::Full),
+    ))
     .on_click(|| return Some(State::MovePage(Pages::MainMenu)))
-    .set_is_on_dialogue();
+    .set_is_on_dialogue(1);
     // .set_padding(75.0, 25.0);
 
     let n_btn = RegularButton::new(
         ObjectPosition::dynamic(DynamicPosition::Flex, DynamicPosition::Center),
         None,
         "Tidak",
-        TextConfig::default(),
+        TextConfig::default(font.clone()),
         RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
         6.0,
+        font.clone()
     )
-    .set_dimensions(ObjectDimension::new(0.0, 0.0, Some(DynamicDimension::Flex), Some(DynamicDimension::Full)))
+    .set_dimensions(ObjectDimension::new(
+        0.0,
+        0.0,
+        Some(DynamicDimension::Grid),
+        Some(DynamicDimension::Full),
+    ))
     .on_click(|| {
         return Some(State::CloseDialogueBox(1));
     })
-    .set_is_on_dialogue();
+    .set_is_on_dialogue(1);
     // .set_padding(75.0, 25.0);
 
     let mut quit_room_dialog_btn_wrapper = Container::new(
@@ -270,7 +299,7 @@ fn load_room_objects() -> Box<dyn Object> {
 
     quit_room_dialog_btn_wrapper.add_child_ref(Box::new(y_btn));
     quit_room_dialog_btn_wrapper.add_child_ref(Box::new(n_btn));
-    quit_room_dialog_btn_wrapper.set_is_flex_ref(Flex::X,20.0);
+    quit_room_dialog_btn_wrapper.set_is_grid_ref(Direction::X, 20.0);
 
     quit_room_dialog.add_object_ref(Box::new(quit_room_dialog_heading));
     quit_room_dialog.add_object_ref(Box::new(quit_room_dialog_p));
@@ -289,7 +318,7 @@ fn load_room_objects() -> Box<dyn Object> {
     wrapper_3_top_bottom_marginer.add_child_ref(Box::new(player_slot_2));
     wrapper_3_top_bottom_marginer.add_child_ref(Box::new(player_slot_3));
     wrapper_3_top_bottom_marginer.add_child_ref(Box::new(player_slot_4));
-    wrapper_3_top_bottom_marginer.set_is_flex_ref(Flex::X,25.0);
+    wrapper_3_top_bottom_marginer.set_is_grid_ref(Direction::X, 25.0);
 
     wrapper_3_top_bottom.add_child_ref(Box::new(wrapper_3_top_bottom_marginer));
 
@@ -308,4 +337,144 @@ fn load_room_objects() -> Box<dyn Object> {
     wrapper.add_child_ref(Box::new(quit_room_dialog));
 
     return Box::new(wrapper);
+}
+
+fn load_config_dialogue(font: Arc<Nunito>) -> Box<dyn Object + Send> {
+    let header = Text::new("Konfigurasi", font.clone()).set_position(ObjectPosition::dynamic(
+        DynamicPosition::Center,
+        DynamicPosition::Start,
+    ));
+
+    let top_container = Container::new(
+        ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Start),
+        ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Percent(15.0)),
+        ParentState::new(),
+        None,
+    )
+    .add_child(Box::new(header));
+
+    let mut edit_config_dialogue = DialogueBox::new(
+        ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
+        ObjectDimension::absolute(800.0, 500.0),
+        RectangleConfig::new(5.0, Gradient::new(0.0, vec![BLACK]), 2.0, WHITE),
+        3,
+    );
+
+    let switch_1 = load_config_option_switch("Boleh nge-rail", font.clone());
+    let switch_2 = load_config_option_switch("Boleh tumpuk londo", font.clone());
+    let switch_3 = load_config_option_switch("Pukulan bebas", font.clone());
+    let switch_4 = load_config_option_switch("Skor pemukul", font.clone());
+
+    let left_container = Container::new(
+        ObjectPosition::dynamic(
+            DynamicPosition::Start,
+            DynamicPosition::Custom(Arc::new(|px, py, pw, ph| ph * 0.15)),
+        ),
+        ObjectDimension::dynamic(
+            DynamicDimension::Percent(50.0),
+            DynamicDimension::Percent(75.0),
+        ),
+        ParentState::new(),
+        None,
+    )
+    .add_child(switch_1)
+    .add_child(switch_2)
+    .add_child(switch_3)
+    .add_child(switch_4)
+    .set_is_flex(Direction::Y, 25.0)
+    .set_padding_all(0.0, 20.0, 0.0, 0.0);
+
+    let switch_5 = load_config_option_switch("Joker", font.clone());
+
+    let right_container = Container::new(
+        ObjectPosition::dynamic(
+            DynamicPosition::End,
+            DynamicPosition::Custom(Arc::new(|px, py, pw, ph| ph * 0.15)),
+        ),
+        ObjectDimension::dynamic(
+            DynamicDimension::Percent(50.0),
+            DynamicDimension::Percent(75.0),
+        ),
+        ParentState::new(),
+        None,
+    )
+    .add_child(switch_5)
+    .set_is_flex(Direction::Y, 25.0)
+    .set_is_flex(Direction::Y, 25.0)
+    .set_padding_all(0.0, 0.0, 0.0, 20.0);
+
+    let apply_btn = RegularButton::new(
+        ObjectPosition::dynamic(DynamicPosition::Grid, DynamicPosition::Center),
+        Some(ObjectDimension::dynamic(
+            DynamicDimension::Grid,
+            DynamicDimension::Full,
+        )),
+        "Terapkan",
+        TextConfig::default(font.clone()),
+        RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
+        6.0,
+        font.clone()
+    )
+    .set_is_on_dialogue(3);
+
+    let cancel_btn = RegularButton::new(
+        ObjectPosition::dynamic(DynamicPosition::Grid, DynamicPosition::Center),
+        Some(ObjectDimension::dynamic(
+            DynamicDimension::Grid,
+            DynamicDimension::Full,
+        )),
+        "Batal",
+        TextConfig::default(font.clone()),
+        RectangleConfig::new(5.0, Gradient::gray(), 0.0, BLANK),
+        6.0,
+        font.clone()
+    )
+    .set_is_on_dialogue(3)
+    .on_click(|| return Some(State::CloseDialogueBox(3)));
+
+    let btn_container = Container::new(
+        ObjectPosition::dynamic(DynamicPosition::End, DynamicPosition::End),
+        ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Percent(15.0)),
+        ParentState::new(),
+        None,
+    )
+    .add_child(Box::new(apply_btn))
+    .add_child(Box::new(cancel_btn))
+    .set_is_grid(Direction::X, 15.0);
+
+    edit_config_dialogue.add_object_ref(Box::new(top_container));
+    edit_config_dialogue.add_object_ref(Box::new(left_container));
+    edit_config_dialogue.add_object_ref(Box::new(right_container));
+    edit_config_dialogue.add_object_ref(Box::new(btn_container));
+
+    return Box::new(edit_config_dialogue);
+}
+
+fn load_config_option_switch(text: &str, font: Arc<Nunito>) -> Box<dyn Object + Send + Sync> {
+    let switch = SwitchButton::new(
+        ObjectPosition::new(
+            0.0,
+            0.0,
+            Some(DynamicPosition::End),
+            Some(DynamicPosition::Center),
+        ),
+        50.0,
+    );
+    let desc = Text::new(text, font.clone())
+        .set_config(TextConfig::new(font.regular.clone(), WHITE, HEADING_5))
+        .set_position(ObjectPosition::dynamic(
+            DynamicPosition::Start,
+            DynamicPosition::Center,
+        ));
+
+    let container = Container::new(
+        ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::Grid),
+        ObjectDimension::new(0.0, 50.0, Some(DynamicDimension::Full), None),
+        ParentState::new(),
+        None,
+    )
+    .add_child(Box::new(switch))
+    .add_child(Box::new(desc));
+
+    return Box::new(container);
 }

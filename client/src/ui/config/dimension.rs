@@ -27,6 +27,6 @@ pub enum DynamicDimension {
     Full,
     Percent(f32),
     // Custom(fn(f32, f32, f32, f32) -> f32)
-    Custom(Arc<dyn Fn(f32, f32, f32, f32) -> f32>),
-    Flex
+    Custom(Arc<dyn Fn(f32, f32, f32, f32) -> f32 + Sync + Send>),
+    Grid
 }

@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use macroquad::window::next_frame;
 
-use crate::{page::{Page, Pages, main_menu::MainMenu, room::Room}, state::State};
+use crate::{page::{Page, Pages, main_menu::MainMenu, room::Room}, state::State, ui::config::font::Nunito};
 
 pub enum GameState {
     Loading,
@@ -13,6 +15,7 @@ pub struct App {
     pub game_state: GameState,
     pub pre_allocated_pages: Vec<Box<dyn Page>>,
     pub next_page_to_load: Option<Pages>,
+    pub font: Arc<Nunito>
 }
 
 impl App {
@@ -22,6 +25,7 @@ impl App {
             game_state: GameState::Uninitialized,
             pre_allocated_pages: Vec::new(),
             next_page_to_load: Some(Pages::MainMenu),
+            font: Arc::new(Nunito::load())
         }
     }
 
@@ -35,17 +39,17 @@ impl App {
                     if let Some(next_page) = &self.next_page_to_load {
                         match next_page {
                             Pages::MainMenu => {
-                                self.current_page = Some(Box::new(MainMenu::new("Kresna")));
+                                self.current_page = Some(Box::new(MainMenu::new("Kresna", self.font.clone())));
                                 self.next_page_to_load = None;
                             }
                             Pages::Room => {
-                                self.current_page = Some(Box::new(Room::new()));
+                                self.current_page = Some(Box::new(Room::new(self.font.clone())));
                                 self.next_page_to_load = None;
                             }
                         }
 
                         self.game_state = GameState::Running;
-                    }
+                        }
                 }
 
                 GameState::Running => {

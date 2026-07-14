@@ -46,7 +46,7 @@ pub trait Object {
                     let res = value(parent_state.x, parent_state.y, parent_state.width, parent_state.height);
                     current_dimension.width = res;
                 }
-                DynamicDimension::Flex => {}
+                DynamicDimension::Grid => {}
             }
         }
 
@@ -62,7 +62,7 @@ pub trait Object {
                     let res = value(parent_state.x, parent_state.y, parent_state.width, parent_state.height);
                     current_dimension.height = res;
                 }
-                DynamicDimension::Flex => {}
+                DynamicDimension::Grid => {}
             }
         }
 
@@ -139,6 +139,7 @@ pub trait Object {
                     position_temp.x = value(parent_state_temp.x, parent_state_temp.y, parent_state_temp.width, parent_state_temp.height);
                 }
                 DynamicPosition::Flex => {}
+                DynamicPosition::Grid => {}
             }
         }
 
@@ -157,6 +158,7 @@ pub trait Object {
                     position_temp.y = value(parent_state_temp.x, parent_state_temp.y, parent_state_temp.width, parent_state_temp.height);
                 }
                 DynamicPosition::Flex => {}
+                DynamicPosition::Grid => {}
             }
         }
 
