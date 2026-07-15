@@ -2,6 +2,7 @@ use rand::RngExt;
 use std::collections::{HashMap, HashSet};
 use strum::IntoEnumIterator;
 
+
 mod config;
 mod manager;
 mod player;
@@ -20,7 +21,7 @@ pub struct Room {
     pub deck: Deck,
     pub stock_pile: Vec<Card>,
     pub discard_pile: Vec<Card>,
-    pub room_id: u64,
+    pub room_id: [u8; 6],
     pub games: HashMap<u32, CardGame>,
     pub players: HashMap<u32, RoomPlayer>,
     pub player_turns: Vec<u32>,
@@ -33,10 +34,8 @@ pub struct Room {
 impl Room {
     pub fn new(cfg: RoomConfig, host_id: u32) -> Result<Self, String> {
         let new_session_player = RoomPlayer::new();
-        // let deck = Deck::new(cfg.with_joker);
         let deck = Deck::new_exp();
 
-        let random_number: u64 = rand::rng().random();
         let mut players = HashMap::new();
         players.insert(host_id, new_session_player);
 
@@ -44,7 +43,7 @@ impl Room {
             deck: deck,
             stock_pile: Vec::new(),
             discard_pile: Vec::new(),
-            room_id: random_number,
+            room_id: [0u8; 6],
             games: HashMap::new(),
             players: players,
             player_turns: Vec::new(),

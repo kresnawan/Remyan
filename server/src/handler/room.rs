@@ -21,7 +21,7 @@ pub async fn handle_create_room(
     {
         let mut instance = app.lock().await;
         let mut server_instance = server.lock().await;
-        
+
         result = match instance.create_room(player_id, config) {
             Ok(res) => res,
             Err(err) => {
@@ -29,12 +29,17 @@ pub async fn handle_create_room(
             }
         };
 
-        server_instance.rooms.insert(result, ServerRoom::new(result));
+        server_instance
+            .rooms
+            .insert(result, ServerRoom::new(result));
     }
 
     (
         StatusCode::OK,
-        format!("Room berhasil dibuat, id: {}", result),
+        format!(
+            "Room berhasil dibuat, id: {}",
+            str::from_utf8(&result).unwrap()
+        ),
     )
 }
 
@@ -49,18 +54,15 @@ pub async fn handle_join_room(
         .expect("Cookie tidak ditemukan");
 
     let player_id: u32 = player_id_str.parse().unwrap();
-    let room_id: u64 = params.room_id.parse().unwrap();
 
-    {
-        let mut instance = app.lock().await;
-        match instance.put_player_to_room(player_id, room_id) {
-            Ok(_) => {
-                println!("{:#?}", instance.room_manager.room_players);
-            }
-            Err(err) => {
-                return (StatusCode::BAD_REQUEST, err);
-            }
-        };
+    let chars = params.room_id.as_bytes();
+    let mut room_id = [0u8; 6];
+
+    room_id.copy_from_slice(&chars[0..6]);
+
+    let mut instance = app.lock().await;
+    if let Err(err) = instance.put_player_to_room(player_id, room_id) {
+        return (StatusCode::BAD_REQUEST, err);
     }
 
     (StatusCode::OK, String::from("Berhasil masuk ke room"))

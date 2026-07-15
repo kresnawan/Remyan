@@ -15,9 +15,9 @@ pub async fn handle_socket(
     app: AppInstance,
     server: ServerInstance,
     player_id: u32,
-    room_id: u64,
+    room_id: [u8; 6],
 ) {
-    println!("Pemain dengan id {player_id} telah terkoneksi ke room: {room_id}");
+    println!("Pemain dengan id {player_id} telah terkoneksi ke room: {}", str::from_utf8(&room_id).unwrap());
 
     let (mut ws_sender, mut ws_receiver) = socket.split();
     let (tx, mut rx) = mpsc::unbounded_channel();

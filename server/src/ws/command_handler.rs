@@ -13,7 +13,7 @@ use crate::{ServerInstance, ws::command_parser::parse_command};
 pub async fn handle_room_command(
     command: Utf8Bytes,
     player_id: u32,
-    room_id: u64,
+    room_id: [u8; 6],
     app: AppInstance,
     server: ServerInstance,
 ) {
@@ -78,7 +78,7 @@ pub async fn handle_room_command(
 pub async fn handle_game_command(
     command: Utf8Bytes,
     player_id: u32,
-    room_id: u64,
+    room_id: [u8; 6],
     app: AppInstance,
     server: ServerInstance,
 ) {

@@ -1,17 +1,30 @@
 use std::collections::HashMap;
+use rand::RngExt;
 
 use crate::{Room, RoomConfig};
 
 #[derive(Debug)]
 pub struct RoomManager {
-    pub rooms: HashMap<u64, Room>,
-
-    // <PlayerId, RoomId>
-    pub room_players: HashMap<u32, u64>,
+    pub rooms: HashMap<[u8; 6], Room>,
+    pub room_players: HashMap<u32, [u8; 6]>,
 }
 
 impl RoomManager {
-    pub fn insert_room(&mut self, host_id: u32, cfg: RoomConfig) -> Result<u64, String> {
+    fn generate_room_id() -> [u8; 6] {
+        const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+
+        let mut rng = rand::rng();
+        let mut result  = [0u8; 6];
+
+        for i in 0..6 {
+            let idx = rng.random_range(..CHARSET.len());
+            result[i] = CHARSET[idx];
+        }
+
+        result
+    }
+
+    pub fn insert_room(&mut self, host_id: u32, cfg: RoomConfig) -> Result<[u8; 6], String> {
         if self.check_if_player_in_a_room(host_id) {
             return Err(format!(
                 "[SESSION GAGAL DIBUAT] Player dengan ID {} sudah masuk di session",
@@ -21,12 +34,23 @@ impl RoomManager {
 
         let new_session = Room::new(cfg, host_id);
 
+        let room_id: [u8; 6];
+
+        loop {
+            let id = RoomManager::generate_room_id();
+            if self.rooms.contains_key(&id) {
+                continue;
+            } else {
+                room_id = id;
+                break;
+            }
+        }
+
         match new_session {
             Ok(room) => {
-                let room_id = room.room_id;
 
                 self.rooms.insert(room_id, room);
-                println!("[SESSION DIBUAT] Id: {}", room_id);
+                println!("[SESSION DIBUAT] Id: {}", str::from_utf8(&room_id).unwrap());
 
                 self.put_player_in_room(host_id, room_id).unwrap();
 
@@ -42,7 +66,7 @@ impl RoomManager {
         self.room_players.contains_key(&player_id)
     }
 
-    pub fn put_player_in_room(&mut self, player_id: u32, room_id: u64) -> Result<(), String> {
+    pub fn put_player_in_room(&mut self, player_id: u32, room_id: [u8; 6]) -> Result<(), String> {
         if self.check_if_player_in_a_room(player_id) {
             return Err(format!("Pemain {player_id} sudah masuk ke room"));
         }
@@ -62,11 +86,11 @@ impl RoomManager {
             return Err(e);
         };
 
-        println!("Pemain {player_id} masuk room: {room_id}");
+        println!("Pemain {player_id} masuk room: {}", str::from_utf8(&room_id).unwrap());
         return Ok(());
     }
 
-    pub fn get_room(&self, room_id: u64) -> Option<&Room> {
+    pub fn get_room(&self, room_id: [u8; 6]) -> Option<&Room> {
         self.rooms.get(&room_id)
     }
 }

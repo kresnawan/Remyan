@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use axum::{Extension, Router};
+use axum::{Extension, Router, response::IntoResponse, routing::get};
 use remyan_core::{App, AppInstance};
 use serde::Deserialize;
 use tokio::sync::Mutex;
@@ -21,7 +21,7 @@ pub struct RoomIdQuery {
 }
 
 pub struct Server {
-    pub rooms: HashMap<u64, ServerRoom>,
+    pub rooms: HashMap<[u8; 6], ServerRoom>,
 }
 
 impl Server {
@@ -32,6 +32,7 @@ impl Server {
     }
     pub async fn init(server: Arc<Mutex<Server>>, core_app: AppInstance) {
         let app: Router = Router::new()
+            .route("/ping", get(|| async {"Pong"}))
             .merge(room())
             .merge(auth())
             .merge(ws())

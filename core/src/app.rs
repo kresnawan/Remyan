@@ -52,7 +52,7 @@ impl App {
         }
     }
 
-    pub fn put_player_to_room(&mut self, player_id: u32, room_id: u64) -> Result<(), String> {
+    pub fn put_player_to_room(&mut self, player_id: u32, room_id: [u8; 6]) -> Result<(), String> {
         // match self.get_player_status(player_id) {
         //     Some(n) => match n {
         //         PlayerStatus::Offline => {
@@ -87,7 +87,7 @@ impl App {
         Ok(())
     }
 
-    pub fn create_room(&mut self, host_id: u32, cfg: RoomConfig) -> Result<u64, String> {
+    pub fn create_room(&mut self, host_id: u32, cfg: RoomConfig) -> Result<[u8; 6], String> {
         // match self.get_player_status(host_id) {
         //     Some(n) => match n {
         //         PlayerStatus::Offline => {
@@ -101,7 +101,7 @@ impl App {
         self.room_manager.insert_room(host_id, cfg)
     }
 
-    pub fn get_room(&self, room_id: u64) -> Option<&Room> {
+    pub fn get_room(&self, room_id: [u8; 6]) -> Option<&Room> {
         self.room_manager.get_room(room_id)
     }
 }

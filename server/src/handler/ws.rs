@@ -28,7 +28,10 @@ pub async fn handle_connect(
         .expect("Cookie tidak ditemukan");
 
     let player_id: u32 = player_id_str.parse().unwrap();
-    let room_id: u64 = params.room_id.parse().unwrap();
+    let chars = params.room_id.as_bytes();
+    let mut room_id = [0u8; 6];
+
+    room_id.copy_from_slice(&chars[0..6]);
 
     {
         let instance = game_app.lock().await;

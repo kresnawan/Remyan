@@ -5,12 +5,12 @@ use std::collections::HashMap;
 use crate::Tx;
 
 pub struct ServerRoom {
-    pub room_id: u64,
+    pub room_id: [u8; 6],
     pub txs: HashMap<u32, Option<Tx>>,
 }
 
 impl ServerRoom {
-    pub fn new(room_id: u64) -> Self {
+    pub fn new(room_id: [u8; 6]) -> Self {
         ServerRoom { room_id, txs: HashMap::new() }
     }
     pub async fn broadcast(&mut self, all: bool, sender: u32, token: EventToken) {
