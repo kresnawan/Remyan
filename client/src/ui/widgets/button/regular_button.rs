@@ -86,6 +86,15 @@ impl Object for RegularButton {
         self.components
             .shadow
             .update(parent_x, parent_y, parent_w, parent_h, state);
+
+        self.components.shadow.position.x = self.components.background.position.x + self.shadow_offset;
+        self.components.shadow.position.y = self.components.background.position.y + self.shadow_offset;
+
+        if self.state.is_pressed {
+            self.components.background.position.x = self.components.shadow.position.x;
+            self.components.background.position.y = self.components.shadow.position.y;
+        }
+
         self.components.text.update(
             Some(self.components.background.position.x + self.components.background.parent.x),
             Some(self.components.background.position.y + self.components.background.parent.y),
