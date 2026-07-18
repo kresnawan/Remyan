@@ -5,16 +5,22 @@ use macroquad::input::{
 };
 
 use crate::{
-    state::State, ui::{
+    state::State,
+    ui::{
         config::{
             dimension::{
                 DynamicDimension::{Custom, Full},
                 ObjectDimension,
-            }, font::Nunito, parent::ParentState, position::{
+            },
+            font::Nunito,
+            parent::ParentState,
+            position::{
                 DynamicPosition::{Center, Start},
                 ObjectPosition,
             },
-        }, traits::{click::Clickable, hover::Hoverable, object::Object, press::Pressable}, widgets::{
+        },
+        traits::{click::Clickable, hover::Hoverable, object::Object, press::Pressable},
+        widgets::{
             container::Container,
             rectangle::{Rectangle, RectangleConfig},
             text::{Text, TextConfig},
@@ -34,6 +40,7 @@ pub struct TextInputState {
     is_pressed: bool,
     is_clicked: bool,
     is_focused: bool,
+    on_change_event: Option<Box<dyn Fn(String) -> Option<State> + Send + Sync>>,
 }
 
 impl TextInputState {
@@ -43,6 +50,7 @@ impl TextInputState {
             is_pressed: false,
             is_clicked: false,
             is_focused: false,
+            on_change_event: None,
         }
     }
 }
@@ -59,7 +67,7 @@ impl TextInput {
         dimension: ObjectDimension,
         text_config: TextConfig,
         background_config: RectangleConfig,
-        font: Arc<Nunito>
+        font: Arc<Nunito>,
     ) -> Self {
         let container = Container::new(position, dimension, ParentState::new(), None);
 
@@ -96,6 +104,15 @@ impl TextInput {
             },
         }
     }
+
+    pub fn get_value(&self) -> &String {
+        &self.components.text.value
+    }
+
+    pub fn set_on_change_event(mut self, value: Box<dyn Fn(String) -> Option<State> + Send + Sync>) -> Self {
+        self.state.on_change_event = Some(value);
+        self
+    } 
 }
 
 impl Object for TextInput {
@@ -147,12 +164,20 @@ impl Object for TextInput {
             if self.state.is_focused {
                 if c.is_ascii_graphic() || c == ' ' {
                     self.components.text.value.push(c);
+                    if let Some(event) = &self.state.on_change_event {
+                        let result = event(self.components.text.value.clone());
+                        return result;
+                    }
                 }
             }
         }
 
         if is_key_pressed(KeyCode::Backspace) {
             self.components.text.value.pop();
+            if let Some(event) = &self.state.on_change_event {
+                let result = event(self.components.text.value.clone());
+                return result;
+            }
         }
 
         self.components

@@ -3,13 +3,20 @@ use std::sync::Arc;
 use macroquad::color::{BLANK, Color};
 
 use crate::{
-    state::State, ui::{
+    state::{PlayerJoinStruct, State},
+    ui::{
         config::{
-            dimension::{DynamicDimension::Full, ObjectDimension}, font::Nunito, gradient::Gradient, parent::ParentState, position::{
-                DynamicPosition::{self, Center},
+            dimension::{DynamicDimension::Full, ObjectDimension},
+            font::Nunito,
+            gradient::Gradient,
+            parent::ParentState,
+            position::{
+                DynamicPosition::{self, Center, End},
                 ObjectPosition,
             },
-        }, traits::object::Object, widgets::{
+        },
+        traits::object::Object,
+        widgets::{
             plus::{Plus, PlusAttribute},
             rectangle::{Rectangle, RectangleConfig},
             text::Text,
@@ -18,7 +25,7 @@ use crate::{
 };
 
 pub struct PlayerSlotState {
-    pub player: Option<String>,
+    pub player: Option<PlayerJoinStruct>,
     pub is_hovered: bool,
     pub is_pressed: bool,
     pub is_clicked: bool,
@@ -44,10 +51,16 @@ pub struct PlayerSlot {
     rec_outline: Rectangle,
     rec_fill: Rectangle,
     player_name: Text,
+    host_text: Text,
+    index: usize,
 }
 
 impl PlayerSlot {
-    pub fn new(position: ObjectPosition, dimension: ObjectDimension, font: Arc<Nunito>) -> PlayerSlot {
+    pub fn new(
+        position: ObjectPosition,
+        dimension: ObjectDimension,
+        font: Arc<Nunito>,
+    ) -> PlayerSlot {
         let plus = Plus::new(
             ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
             PlusAttribute::default(),
@@ -76,6 +89,9 @@ impl PlayerSlot {
             ),
         );
 
+        let host_text =
+            Text::new("Host", font.clone()).set_position(ObjectPosition::dynamic(Center, End));
+
         let player_name = Text::new("", font)
             .set_position(ObjectPosition::dynamic(Center, Center))
             .set_dimension(ObjectDimension::new(0.0, 0.0, None, Some(Full)));
@@ -88,12 +104,14 @@ impl PlayerSlot {
             plus: plus,
             rec_outline: rec_outline,
             rec_fill: rec_fill,
+            host_text,
             player_name,
+            index: 0,
         }
     }
 
-    pub fn set_player(mut self, name: String) -> Self {
-        self.state.player = Some(name);
+    pub fn set_index(mut self, index: usize) -> Self {
+        self.index = index;
         self
     }
 }
@@ -114,6 +132,12 @@ impl Object for PlayerSlot {
         } else {
             self.plus.draw();
         }
+
+        if let Some(value) = &self.state.player {
+            if value.is_room_host {
+                self.host_text.draw();
+            }
+        }
     }
 
     fn update(
@@ -128,14 +152,23 @@ impl Object for PlayerSlot {
         self.update_dimension();
         self.update_alignment();
 
-        if let Some(name) = &self.state.player {
+        if let Some(value) = &self.state.player {
+            let (bg_color, outline_color) = if value.is_self {
+                (Color::from_hex(0x02316e), Color::from_hex(0x073f87))
+            } else {
+                (Color::from_hex(0x363636), Color::from_hex(0x454545))
+            };
             self.rec_fill.config.color = Gradient::new(
                 0.0,
-                vec![Color::from_hex(0x363636), Color::from_hex(0x363636)],
+                vec![bg_color, bg_color],
             );
-            self.rec_outline.config.outline_color = Color::from_hex(0x454545);
+            self.rec_outline.config.outline_color = outline_color;
 
-            self.player_name.value = name.clone();
+            if let Some(name) = &value.name_alias {
+                self.player_name.value = name.clone();
+            } else {
+                self.player_name.value = format!("{}", value.id);
+            }
         } else {
             self.rec_fill.config.color = Gradient::new(
                 0.0,
@@ -147,6 +180,16 @@ impl Object for PlayerSlot {
             self.rec_outline.config.outline_color = Color::from_rgba(255, 255, 255, 50);
         }
 
+        if let Some(value) = state {
+            if let State::PlayerJoin(arr) = value {
+                if let Some(id) = &arr[self.index] {
+                    self.state.player = Some(id.clone());
+                } else {
+                    self.state.player = None;
+                }
+            }
+        }
+
         self.plus.update(
             Some(self.position.x + self.parent.x),
             Some(self.position.y + self.parent.y),
@@ -156,6 +199,14 @@ impl Object for PlayerSlot {
         );
 
         self.player_name.update(
+            Some(self.position.x + self.parent.x),
+            Some(self.position.y + self.parent.y),
+            Some(self.dimension.width),
+            Some(self.dimension.height),
+            state,
+        );
+
+        self.host_text.update(
             Some(self.position.x + self.parent.x),
             Some(self.position.y + self.parent.y),
             Some(self.dimension.width),

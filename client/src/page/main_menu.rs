@@ -30,6 +30,7 @@ use crate::{
 pub struct MainMenu {
     player_name: String,
     objects: Vec<Box<dyn Object + Send>>,
+    room_id_input: String,
 }
 
 impl MainMenu {
@@ -51,9 +52,9 @@ impl MainMenu {
             TextConfig::default(font.clone()),
             RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
             6.0,
-            font.clone()
+            font.clone(),
         )
-        .on_click(|| return Some(State::MovePage(Pages::Room)))
+        .on_click(|| return Some(State::CreateRoom))
         .set_padding(0.0, 50.0)
         .set_alignment(Some(DynamicPosition::Center), None);
 
@@ -67,7 +68,7 @@ impl MainMenu {
             TextConfig::default(font.clone()),
             RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
             6.0,
-            font.clone()
+            font.clone(),
         )
         .on_click(|| {
             return Some(State::OpenDialogueBox(2));
@@ -85,7 +86,7 @@ impl MainMenu {
             TextConfig::default(font.clone()),
             RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
             6.0,
-            font.clone()
+            font.clone(),
         )
         .on_click(|| {
             return None;
@@ -134,8 +135,9 @@ impl MainMenu {
             ObjectDimension::absolute(300.0, 100.0),
             TextConfig::new(font.regular.clone(), WHITE, HEADING_2),
             RectangleConfig::new(5.0, Gradient::new(0.0, vec![BLACK]), 2.0, WHITE),
-            font.clone()
-        );
+            font.clone(),
+        )
+        .set_on_change_event(Box::new(|value| return Some(State::InputRoomId(value))));
 
         let join_room_dialogue_middle_wrapper = Container::new(
             ObjectPosition::dynamic(Center, Custom(Arc::new(|_, _, _, ph| ph * 0.2))),
@@ -152,7 +154,7 @@ impl MainMenu {
             TextConfig::default(font.clone()),
             RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
             6.0,
-            font.clone()
+            font.clone(),
         )
         .set_dimensions(ObjectDimension::new(
             0.0,
@@ -170,7 +172,7 @@ impl MainMenu {
             TextConfig::default(font.clone()),
             RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
             6.0,
-            font.clone()
+            font.clone(),
         )
         .set_dimensions(ObjectDimension::new(
             0.0,
@@ -178,7 +180,8 @@ impl MainMenu {
             Some(DynamicDimension::Grid),
             Some(DynamicDimension::Full),
         ))
-        .set_is_on_dialogue(2);
+        .set_is_on_dialogue(2)
+        .on_click(|| return Some(State::JoinRoom(String::new())));
 
         let join_room_dialogue_bottom_wrapper = Container::new(
             ObjectPosition::dynamic(Center, End),
@@ -209,6 +212,7 @@ impl MainMenu {
         return MainMenu {
             player_name: String::from(player_name),
             objects: vec![Box::new(container), Box::new(join_room_dialogue)],
+            room_id_input: String::new(),
         };
     }
 }
@@ -217,7 +221,20 @@ impl Page for MainMenu {
     fn update(&mut self, state: &Option<State>) -> Option<State> {
         for item in &mut self.objects {
             if let Some(n) = item.update(None, None, None, None, state) {
-                return Some(n);
+                match n {
+                    State::InputRoomId(value) => {
+                        self.room_id_input = value;
+
+                        println!("{}", self.room_id_input);
+                        return None;
+                    }
+
+                    State::JoinRoom(_) => return Some(State::JoinRoom(self.room_id_input.clone())),
+
+                    _ => {
+                        return Some(n);
+                    }
+                }
             }
         }
 

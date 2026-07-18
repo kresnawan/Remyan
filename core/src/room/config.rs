@@ -1,14 +1,14 @@
 use crate::{Card, CardType};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum NumberOfJokers {
     None,
     Two,
     Four,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RoomConfig {
     pub allow_court_stacking: bool,
     pub free_hit: bool,

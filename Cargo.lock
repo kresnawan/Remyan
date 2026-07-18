@@ -1344,6 +1344,7 @@ dependencies = [
  "axum",
  "axum-extra",
  "futures-util",
+ "rand 0.10.1",
  "remyan-core",
  "serde",
  "serde_json",

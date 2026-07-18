@@ -2,20 +2,21 @@ use serde::{Deserialize, Serialize};
 
 use crate::{card::Card, protocol::DrawSource, room::RoomConfig};
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub enum CommandToken {
     RoomCommand(RoomCommand),
     GameCommand(GameCommand)
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub enum RoomCommand {
     StartGame,
     SendMessage { message: String },
     EditConfig { new_config: RoomConfig },
+    LeaveRoom
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub enum GameCommand {
     Put {
         cards: Vec<Card>

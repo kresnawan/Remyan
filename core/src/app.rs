@@ -18,23 +18,13 @@ impl App {
         };
     }
 
-    pub fn register_new_player(&mut self, id: u32, uname: String) -> Result<(), String> {
-        match self.get_player_status(id) {
-            Some(_) => {
-                return Err(format!(
-                    "Player dengan ID {} telah terdaftar, setiap ID harus unik",
-                    id
-                ));
-            }
-            None => {
-                let new_player = Player::new(uname);
-                self.players.insert(id, new_player);
+    pub fn register_new_player(&mut self, id: u32) -> Result<(), String> {
+        let new_player = Player::new(id);
+        self.players.insert(id, new_player);
 
-                println!("[PLAYER TEREGISTRASI] PlayerId: {}", id);
+        println!("[PLAYER TEREGISTRASI] PlayerId: {}", id);
 
-                return Ok(());
-            }
-        }
+        return Ok(());
     }
 
     pub fn get_player_by_id(&mut self, player_id: u32) -> Option<&mut Player> {

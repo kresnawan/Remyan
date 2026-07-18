@@ -6,28 +6,29 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use axum_extra::extract::CookieJar;
 use remyan_core::AppInstance;
 use tokio::sync::Mutex;
 
 use crate::{
-    router::{RoomIdQuery, Server},
+    router::{RoomIdAndPlayerIdQuery, Server},
     ws::socket_handler::handle_socket,
 };
 
 pub async fn handle_connect(
     Extension(game_app): Extension<AppInstance>,
     Extension(server): Extension<Arc<Mutex<Server>>>,
-    jar: CookieJar,
-    Query(params): Query<RoomIdQuery>,
+    Query(params): Query<RoomIdAndPlayerIdQuery>,
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
-    let player_id_str = jar
-        .get("id")
-        .map(|cookie| cookie.value().to_string())
-        .expect("Cookie tidak ditemukan");
+    let player_id: u32;
+    let player_id_str = params.player_id;
 
-    let player_id: u32 = player_id_str.parse().unwrap();
+    if let Ok(value) = player_id_str.parse::<u32>() {
+        player_id = value;
+    } else {
+        return (StatusCode::BAD_REQUEST).into_response();
+    }
+
     let chars = params.room_id.as_bytes();
     let mut room_id = [0u8; 6];
 

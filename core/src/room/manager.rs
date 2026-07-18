@@ -24,6 +24,10 @@ impl RoomManager {
         result
     }
 
+    pub fn generate_player_id() -> u32 {
+        rand::rng().random()
+    }
+
     pub fn insert_room(&mut self, host_id: u32, cfg: RoomConfig) -> Result<[u8; 6], String> {
         if self.check_if_player_in_a_room(host_id) {
             return Err(format!(
@@ -88,6 +92,26 @@ impl RoomManager {
 
         println!("Pemain {player_id} masuk room: {}", str::from_utf8(&room_id).unwrap());
         return Ok(());
+    }
+
+    pub fn remove_player_from_room(&mut self, player_id: u32) -> Result<usize, String> {
+        if let Some(v) = self.room_players.remove(&player_id) {
+            let room = self.rooms.get_mut(&v).unwrap();
+            let room_player_count =  room.remove_player(player_id);
+
+            if let Ok(len) = room_player_count {
+                if len == 0 {
+                    self.rooms.remove(&v).unwrap();
+                }
+
+                return Ok(len);
+            } else if let Err(err) = room_player_count {
+                return Err(err);
+            }
+        }
+
+        return Err(format!("Player tidak ditemukan"));
+        
     }
 
     pub fn get_room(&self, room_id: [u8; 6]) -> Option<&Room> {

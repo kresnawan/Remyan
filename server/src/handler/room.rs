@@ -10,12 +10,20 @@ pub async fn handle_create_room(
     jar: CookieJar,
     Json(config): Json<RoomConfig>,
 ) -> impl IntoResponse {
-    let player_id_str = jar
-        .get("id")
-        .map(|cookie| cookie.value().to_string())
-        .expect("Cookie tidak ditemukan");
+    let player_id: u32;
+    let player_id_str = jar.get("id").map(|cookie| cookie.value().to_string());
 
-    let player_id: u32 = player_id_str.parse().unwrap();
+    if let Some(value) = player_id_str {
+        let pid = value.parse::<u32>();
+        if let Ok(res) = pid {
+            player_id = res;
+        } else {
+            return (StatusCode::BAD_REQUEST, format!("ID tidak valid"));
+        }
+    } else {
+        return (StatusCode::BAD_REQUEST, format!("Cookie tidak ditemukan"));
+    }
+
     let result;
 
     {
@@ -36,10 +44,7 @@ pub async fn handle_create_room(
 
     (
         StatusCode::OK,
-        format!(
-            "Room berhasil dibuat, id: {}",
-            str::from_utf8(&result).unwrap()
-        ),
+        format!("{}", str::from_utf8(&result).unwrap()),
     )
 }
 
@@ -48,12 +53,19 @@ pub async fn handle_join_room(
     Query(params): Query<RoomIdQuery>,
     jar: CookieJar,
 ) -> impl IntoResponse {
-    let player_id_str = jar
-        .get("id")
-        .map(|cookie| cookie.value().to_string())
-        .expect("Cookie tidak ditemukan");
+    let player_id: u32;
+    let player_id_str = jar.get("id").map(|cookie| cookie.value().to_string());
 
-    let player_id: u32 = player_id_str.parse().unwrap();
+    if let Some(value) = player_id_str {
+        let pid = value.parse::<u32>();
+        if let Ok(res) = pid {
+            player_id = res;
+        } else {
+            return (StatusCode::BAD_REQUEST, format!("ID tidak valid"));
+        }
+    } else {
+        return (StatusCode::BAD_REQUEST, format!("Cookie tidak ditemukan"));
+    }
 
     let chars = params.room_id.as_bytes();
     let mut room_id = [0u8; 6];

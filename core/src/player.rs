@@ -7,15 +7,17 @@ pub enum PlayerStatus {
 
 #[derive(Debug)]
 pub struct Player {
-    pub username: String,
+    pub id: u32,
+    pub username: Option<String>,
     pub status: PlayerStatus,
 }
 
 impl Player {
-    pub fn new(username: String) -> Self {
+    pub fn new(player_id: u32) -> Self {
         return Player {
-            username: username,
-            status: PlayerStatus::Offline,
+            id: player_id,
+            username: None,
+            status: PlayerStatus::Online,
         };
     }
 }

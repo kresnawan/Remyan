@@ -16,7 +16,7 @@ pub async fn handle_room_command(
     room_id: [u8; 6],
     app: AppInstance,
     server: ServerInstance,
-) {
+) -> bool {
     let mut instance = app.lock().await;
     let room = instance.room_manager.rooms.get_mut(&room_id).unwrap();
 
@@ -47,7 +47,6 @@ pub async fn handle_room_command(
                     server_room
                         .send_player(EventToken::ServerEvent(ServerEvent::Error(err)), player_id)
                         .await;
-                    return;
                 }
             },
             RoomCommand::EditConfig { new_config } => {}
@@ -63,6 +62,9 @@ pub async fn handle_room_command(
                     )
                     .await;
             }
+            RoomCommand::LeaveRoom => {
+                return false;
+            }
         }
     } else {
         server_room
@@ -71,8 +73,9 @@ pub async fn handle_room_command(
                 player_id,
             )
             .await;
-        return;
     }
+
+    return true;
 }
 
 pub async fn handle_game_command(

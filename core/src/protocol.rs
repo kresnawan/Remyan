@@ -9,7 +9,7 @@ pub enum DrawSource {
     DiscardPile,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub enum Error {
     NotAHost,
     PlayerNotEnough,

@@ -11,3 +11,4 @@ serde_json = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 futures-util = { workspace = true, default-features = false, features = ["sink"] }
 remyan-core = { path = "../core" }
+rand = { workspace = true }

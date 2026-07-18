@@ -8,16 +8,28 @@ use macroquad::{
     experimental::coroutines::start_coroutine,
     window::{next_frame, screen_height, screen_width},
 };
-use quad_net::http_request::{Method, Request, RequestBuilder};
-use remyan_core::Player;
+use quad_net::{
+    http_request::{Method, Request, RequestBuilder},
+    web_socket::WebSocket,
+};
+use remyan_core::{
+    Player,
+    protocol::{
+        command::{CommandToken, RoomCommand},
+        event::{EventToken, ServerEvent},
+    },
+};
 
-use crate::ui::{
-    config::dimension::DynamicDimension,
-    widgets::{
-        button::Button,
-        container::Direction,
-        switch_button::SwitchButton,
-        text::{HEADING_5, TextConfig},
+use crate::{
+    state::PlayerJoinStruct,
+    ui::{
+        config::dimension::DynamicDimension,
+        widgets::{
+            button::Button,
+            container::Direction,
+            switch_button::SwitchButton,
+            text::{HEADING_5, TextConfig},
+        },
     },
 };
 
@@ -47,16 +59,22 @@ use crate::{
 
 pub struct Room {
     players: Vec<Player>,
+    room_id: String,
     objects: Vec<Box<dyn Object + Send>>,
+    ws: Option<WebSocket>,
+    player_id: u32
 }
 
 impl Room {
-    pub fn new(font: Arc<Nunito>) -> Self {
+    pub fn new(font: Arc<Nunito>, ws: WebSocket, room_id: String, player_id: u32) -> Self {
         let wrapper = load_room_objects(font.clone());
         let dialogue = load_config_dialogue(font.clone());
         Self {
             players: Vec::new(),
             objects: vec![wrapper, dialogue],
+            ws: Some(ws),
+            room_id,
+            player_id
         }
     }
 }
@@ -65,7 +83,53 @@ impl Page for Room {
     fn update(&mut self, state: &Option<State>) -> Option<State> {
         for i in &mut self.objects {
             if let Some(n) = i.update(None, None, None, None, state) {
+                if let State::LeaveRoom = n {
+                    if let Some(ws) = &self.ws {
+                        let msg = serde_json::to_string(&CommandToken::RoomCommand(
+                            RoomCommand::LeaveRoom,
+                        ))
+                        .unwrap();
+                        ws.send_text(&msg);
+                    }
+                }
+
                 return Some(n);
+            }
+        }
+
+        if let Some(ws) = &mut self.ws {
+            if let Some(value) = ws.try_recv() {
+                let deserialized =
+                    serde_json::from_str::<EventToken>(str::from_utf8(&value).unwrap());
+
+                if let Ok(token) = deserialized {
+                    match token {
+                        EventToken::ServerEvent(e) => match e {
+                            ServerEvent::RoomPlayer { players, host_id } => {
+                                let mut arr: Vec<Option<PlayerJoinStruct>> = Vec::new();
+                                for i in 0..4 {
+                                    if let Some(value) = players.get(i) {
+                                        arr.push(Some(PlayerJoinStruct {
+                                            id: *value,
+                                            name_alias: None,
+                                            is_self: *value == self.player_id,
+                                            is_room_host: *value == host_id,
+                                        }));
+                                    } else {
+                                        arr.push(None);
+                                    }
+                                }
+
+                                return Some(State::PlayerJoin(arr));
+                            }
+
+                            _ => {}
+                        },
+
+                        EventToken::RoomEvent(e) => {}
+                        EventToken::GameEvent(e) => {}
+                    }
+                }
             }
         }
 
@@ -167,7 +231,7 @@ fn load_room_objects(font: Arc<Nunito>) -> Box<dyn Object + Send> {
         TextConfig::default(font.clone()),
         RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
         6.0,
-        font.clone()
+        font.clone(),
     )
     .on_click(|| return Some(State::MovePage(Pages::MainMenu)))
     .set_padding(100.0, 50.0);
@@ -179,7 +243,7 @@ fn load_room_objects(font: Arc<Nunito>) -> Box<dyn Object + Send> {
         TextConfig::default(font.clone()),
         RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
         6.0,
-        font.clone()
+        font.clone(),
     )
     .on_click(|| return Some(State::OpenDialogueBox(3)))
     .set_padding(75.0, 25.0);
@@ -191,7 +255,7 @@ fn load_room_objects(font: Arc<Nunito>) -> Box<dyn Object + Send> {
         TextConfig::default(font.clone()),
         RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
         6.0,
-        font.clone()
+        font.clone(),
     )
     .on_click(|| return Some(State::OpenDialogueBox(1)))
     .set_padding(75.0, 25.0);
@@ -214,27 +278,30 @@ fn load_room_objects(font: Arc<Nunito>) -> Box<dyn Object + Send> {
     let player_slot_1 = PlayerSlot::new(
         ObjectPosition::dynamic(DynamicPosition::Grid, DynamicPosition::Center),
         ObjectDimension::dynamic(DynamicDimension::Grid, DynamicDimension::Full),
-        font.clone()
+        font.clone(),
     )
-    .set_player(format!("Kresnawan"));
+    .set_index(0);
 
     let player_slot_2 = PlayerSlot::new(
         ObjectPosition::dynamic(DynamicPosition::Grid, DynamicPosition::Center),
         ObjectDimension::dynamic(DynamicDimension::Grid, DynamicDimension::Full),
-        font.clone()
-    );
+        font.clone(),
+    )
+    .set_index(1);
 
     let player_slot_3 = PlayerSlot::new(
         ObjectPosition::dynamic(DynamicPosition::Grid, DynamicPosition::Center),
         ObjectDimension::dynamic(DynamicDimension::Grid, DynamicDimension::Full),
-        font.clone()
-    );
+        font.clone(),
+    )
+    .set_index(2);
 
     let player_slot_4 = PlayerSlot::new(
         ObjectPosition::dynamic(DynamicPosition::Grid, DynamicPosition::Center),
         ObjectDimension::dynamic(DynamicDimension::Grid, DynamicDimension::Full),
-        font.clone()
-    );
+        font.clone(),
+    )
+    .set_index(3);
 
     let quit_room_dialog_heading = Text::new("Keluar Dari Room?", font.clone())
         .set_position(ObjectPosition::dynamic(
@@ -257,7 +324,7 @@ fn load_room_objects(font: Arc<Nunito>) -> Box<dyn Object + Send> {
         TextConfig::default(font.clone()),
         RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
         6.0,
-        font.clone()
+        font.clone(),
     )
     .set_dimensions(ObjectDimension::new(
         0.0,
@@ -265,7 +332,7 @@ fn load_room_objects(font: Arc<Nunito>) -> Box<dyn Object + Send> {
         Some(DynamicDimension::Grid),
         Some(DynamicDimension::Full),
     ))
-    .on_click(|| return Some(State::MovePage(Pages::MainMenu)))
+    .on_click(|| return Some(State::LeaveRoom))
     .set_is_on_dialogue(1);
     // .set_padding(75.0, 25.0);
 
@@ -276,7 +343,7 @@ fn load_room_objects(font: Arc<Nunito>) -> Box<dyn Object + Send> {
         TextConfig::default(font.clone()),
         RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
         6.0,
-        font.clone()
+        font.clone(),
     )
     .set_dimensions(ObjectDimension::new(
         0.0,
@@ -413,7 +480,7 @@ fn load_config_dialogue(font: Arc<Nunito>) -> Box<dyn Object + Send> {
         TextConfig::default(font.clone()),
         RectangleConfig::new(5.0, Gradient::primary(), 0.0, BLANK),
         6.0,
-        font.clone()
+        font.clone(),
     )
     .set_is_on_dialogue(3);
 
@@ -427,7 +494,7 @@ fn load_config_dialogue(font: Arc<Nunito>) -> Box<dyn Object + Send> {
         TextConfig::default(font.clone()),
         RectangleConfig::new(5.0, Gradient::gray(), 0.0, BLANK),
         6.0,
-        font.clone()
+        font.clone(),
     )
     .set_is_on_dialogue(3)
     .on_click(|| return Some(State::CloseDialogueBox(3)));

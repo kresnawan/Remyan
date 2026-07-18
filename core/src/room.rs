@@ -1,7 +1,5 @@
-use rand::RngExt;
 use std::collections::{HashMap, HashSet};
 use strum::IntoEnumIterator;
-
 
 mod config;
 mod manager;
@@ -109,6 +107,26 @@ impl Room {
         Ok(())
     }
 
+    pub fn remove_player(&mut self, player_id: u32) -> Result<usize, String> {
+        self.players.remove(&player_id).unwrap();
+        let result: Vec<u32> = self
+            .player_turns
+            .clone()
+            .into_iter()
+            .filter(|&v| v != player_id)
+            .collect();
+
+        self.player_turns = result;
+
+        if player_id == self.host_id {
+            if self.player_turns.len() > 0 {
+                self.host_id = self.player_turns[0]
+            }
+        }
+
+        return Ok(self.player_turns.len());
+    }
+
     pub fn try_next_turn(&mut self) -> Option<bool> {
         if self.current_turn.is_complete() {
             if self.current_turn.index == self.players.len() - 1 {
@@ -119,7 +137,7 @@ impl Room {
 
             if self.stock_pile.is_empty() {
                 self.currently_playing = false;
-                return None
+                return None;
             }
 
             return Some(true);

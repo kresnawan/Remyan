@@ -15,6 +15,7 @@ impl ServerRoom {
     }
     pub async fn broadcast(&mut self, all: bool, sender: u32, token: EventToken) {
         let serialized = serde_json::to_string(&token).unwrap();
+        
         let payload = Utf8Bytes::from(serialized);
 
         let mut txs_iter = self.txs.iter_mut();
