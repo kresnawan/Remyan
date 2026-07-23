@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{Card, protocol::{DrawSource, Error}};
+use crate::{Card, RoomConfig, protocol::{DrawSource, Error}};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub enum EventToken {
@@ -20,14 +20,15 @@ pub enum ServerEvent {
     Error(Error),
     PlayerCard(Vec<Card>),
     DrawnCard(Card),
-    RoomPlayer{ players: Vec<u32>, host_id: u32 }
+    
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub enum RoomEvent {
     StartGame,
     Message { message: String, sender_id: u32 },
-    EditConfig,
+    RoomPlayer{ players: Vec<u32>, host_id: u32 },
+    RoomConfig(RoomConfig),
     GameEnded
 }
 
