@@ -3,10 +3,17 @@ use std::sync::Arc;
 use macroquad::prelude::*;
 
 use crate::{
-    state::State, ui::{
+    state::State,
+    ui::{
         config::{
-            dimension::ObjectDimension, font::Nunito, gradient::Gradient, parent::ParentState, position::{DynamicPosition::Center, ObjectPosition},
-        }, traits::{click::Clickable, hover::Hoverable, object::Object, press::Pressable}, widgets::{
+            dimension::ObjectDimension,
+            font::Nunito,
+            gradient::Gradient,
+            parent::ParentState,
+            position::{DynamicPosition::Center, ObjectPosition},
+        },
+        traits::{click::Clickable, hover::Hoverable, object::Object, press::Pressable},
+        widgets::{
             button::{Button, ButtonState},
             rectangle::{Rectangle, RectangleConfig},
             text::{Text, TextConfig},
@@ -27,6 +34,7 @@ pub struct RegularButton {
     is_on_dialogue: bool,
     dialogue_id: Option<u8>,
     shadow_offset: f32,
+    is_active: bool,
 }
 
 unsafe impl Sync for RegularButton {}
@@ -87,8 +95,10 @@ impl Object for RegularButton {
             .shadow
             .update(parent_x, parent_y, parent_w, parent_h, state);
 
-        self.components.shadow.position.x = self.components.background.position.x + self.shadow_offset;
-        self.components.shadow.position.y = self.components.background.position.y + self.shadow_offset;
+        self.components.shadow.position.x =
+            self.components.background.position.x + self.shadow_offset;
+        self.components.shadow.position.y =
+            self.components.background.position.y + self.shadow_offset;
 
         if self.state.is_pressed {
             self.components.background.position.x = self.components.shadow.position.x;
@@ -104,9 +114,11 @@ impl Object for RegularButton {
         );
 
         self.update_hover();
+        self.state.is_hovered = self.is_active && self.state.is_hovered;
 
-        // this is just naive workaround to make buttons which not contained in currently opened dialogue
-        // box to disabled so that it's not accidentaly clicked unintentionally
+        // this is just naive workaround to disable buttons which 
+        // not contained in currently opened dialogue
+        // box so that it's not clicked unintentionally
         //
         // it's created this way because we didn't find a way to make sure that hovered element is only
         // one on top
@@ -116,11 +128,23 @@ impl Object for RegularButton {
             match state {
                 State::OpenDialogueBox(id) => {
                     if !self.is_on_dialogue {
-                        self.state.is_hovered = false;
+                        self.is_active = false;
                     } else {
                         if let Some(n) = self.dialogue_id {
                             if *id != n {
-                                self.state.is_hovered = false;
+                                self.is_active = false;
+                            }
+                        }
+                    }
+                }
+
+                State::CloseDialogueBox(id) => {
+                    if !self.is_on_dialogue {
+                        self.is_active = true;
+                    } else {
+                        if let Some(n) = self.dialogue_id {
+                            if *id != n {
+                                self.is_active = true;
                             }
                         }
                     }
@@ -193,7 +217,7 @@ impl Button for RegularButton {
         text_config: TextConfig,
         background_config: RectangleConfig,
         shadow_offset: f32,
-        font: Arc<Nunito>
+        font: Arc<Nunito>,
     ) -> Self {
         let dimension = if let Some(value) = dimension {
             value
@@ -241,7 +265,8 @@ impl Button for RegularButton {
             state: ButtonState::new(),
             is_on_dialogue: false,
             shadow_offset,
-            dialogue_id: None
+            dialogue_id: None,
+            is_active: true,
         }
     }
 
