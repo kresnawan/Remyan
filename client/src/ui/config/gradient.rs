@@ -18,6 +18,19 @@ impl Gradient {
         )
     }
 
+    pub fn primary_with_opacity(opacity: f32) -> Gradient {
+        let mut color_1 = Color::from_hex(0xfca503);
+        color_1.a = opacity;
+
+        let mut color_2 = Color::from_hex(0xfc6203);
+        color_2.a = opacity;
+
+        Gradient::new(
+            90.0,
+            vec![color_1, color_2],
+        )
+    }
+
     pub fn secondary() -> Gradient {
         Gradient::new(
             90.0,
@@ -29,6 +42,19 @@ impl Gradient {
         Gradient::new(
             90.0,
             vec![Color::from_hex(0x7d7d7d1), Color::from_hex(0x5c5c5c)],
+        )
+    }
+
+    pub fn gray_with_opacity(opacity: f32) -> Gradient {
+        let mut color_1 = Color::from_hex(0x7d7d7d1);
+        color_1.a = opacity;
+
+        let mut color_2 = Color::from_hex(0x5c5c5c);
+        color_2.a = opacity;
+
+        Gradient::new(
+            90.0,
+            vec![color_1, color_2],
         )
     }
 
