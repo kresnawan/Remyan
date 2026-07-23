@@ -139,12 +139,14 @@ impl Object for DialogueBox {
             if let &State::OpenDialogueBox(id) = n {
                 if self.id == id {
                     self.state.is_shown = true;
+                    return Some(State::Reset);
                 }
             }
 
             if let &State::CloseDialogueBox(id) = n {
                 if self.id == id {
                     self.state.is_shown = false;
+                    return Some(State::Reset);
                 }
             }
         }

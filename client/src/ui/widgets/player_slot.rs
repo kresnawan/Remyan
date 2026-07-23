@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{any::Any, sync::Arc};
 
 use macroquad::color::{BLANK, Color};
 
@@ -117,10 +117,10 @@ impl PlayerSlot {
 }
 
 impl Object for PlayerSlot {
-    fn as_any(&self) -> &dyn std::any::Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+    fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
     fn draw(&self) {
@@ -181,8 +181,8 @@ impl Object for PlayerSlot {
         }
 
         if let Some(value) = state {
-            if let State::PlayerJoin(arr) = value {
-                if let Some(id) = &arr[self.index] {
+            if let State::RoomPlayers{players, is_host: _} = value {
+                if let Some(id) = &players[self.index] {
                     self.state.player = Some(id.clone());
                 } else {
                     self.state.player = None;
