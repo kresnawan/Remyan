@@ -1,18 +1,23 @@
-use crate::page::Pages;
+use remyan_core::RoomConfig;
 
-#[derive(Clone)]
+use crate::ui::widgets::switch_button::{RoomConfigSwitchId, SwitchButtonId};
+
+#[derive(Clone, Debug)]
 pub enum State {
-    MovePage(Pages),
     OpenDialogueBox(u8),
     CloseDialogueBox(u8),
     InputRoomId(String),
     CreateRoom,
     JoinRoom(String),
-    PlayerJoin(Vec<Option<PlayerJoinStruct>>),
-    LeaveRoom
+    RoomPlayers{players: Vec<Option<PlayerJoinStruct>>, is_host: bool},
+    LeaveRoom,
+    ConfigUpdate(RoomConfig),
+    ConfigInput(RoomConfigSwitchId),
+    ApplyConfig,
+    Reset
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PlayerJoinStruct {
     pub id: u32,
     pub name_alias: Option<String>,
