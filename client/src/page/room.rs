@@ -1,22 +1,13 @@
-use std::sync::{
-    Arc,
-    mpsc::{Receiver, Sender, channel},
-};
+use std::sync::Arc;
 
 use macroquad::{
     color::{BLACK, BLANK, Color, WHITE},
-    experimental::coroutines::start_coroutine,
-    window::{next_frame, screen_height, screen_width},
+    window::{screen_height, screen_width},
 };
-use quad_net::{
-    http_request::{Method, Request, RequestBuilder},
-    web_socket::WebSocket,
-};
+use quad_net::web_socket::WebSocket;
 use remyan_core::{
-    Player,
-    protocol::{
-        command::{CommandToken, RoomCommand},
-        event::{EventToken, ServerEvent},
+    NumberOfJokers, Player, RoomConfig, protocol::{
+        command::{CommandToken, RoomCommand}, event::{EventToken, RoomEvent, ServerEvent},
     },
 };
 
@@ -27,7 +18,7 @@ use crate::{
         widgets::{
             button::Button,
             container::Direction,
-            switch_button::SwitchButton,
+            switch_button::{RoomConfigSwitchId, SwitchButton, SwitchButtonId},
             text::{HEADING_5, TextConfig},
         },
     },
@@ -60,22 +51,40 @@ use crate::{
 pub struct Room {
     players: Vec<Player>,
     room_id: String,
+    room_config: RoomConfig,
     objects: Vec<Box<dyn Object + Send>>,
     ws: Option<WebSocket>,
     player_id: u32
 }
 
 impl Room {
-    pub fn new(font: Arc<Nunito>, ws: WebSocket, room_id: String, player_id: u32) -> Self {
-        let wrapper = load_room_objects(font.clone());
-        let dialogue = load_config_dialogue(font.clone());
+    pub fn new(ws: WebSocket, room_id: String, player_id: u32) -> Self {
         Self {
             players: Vec::new(),
-            objects: vec![wrapper, dialogue],
+            objects: Vec::new(),
+            room_config: RoomConfig {
+                allow_court_stacking: false,
+                free_hit: false,
+                allow_railing: false,
+                with_joker: false,
+                hitter_scoring: false,
+                allow_closing: false,
+                number_of_jokers: NumberOfJokers::None,
+                joker_type: None,
+            },
             ws: Some(ws),
             room_id,
-            player_id
+            player_id,
         }
+    }
+
+    pub fn load_ui(mut self, font: Arc<Nunito>) -> Self {
+        let wrapper = load_room_objects(font.clone(), &self.room_id);
+        let dialogue = load_config_dialogue(font.clone());
+
+        self.objects = vec![wrapper, dialogue];
+
+        self
     }
 }
 
@@ -83,54 +92,117 @@ impl Page for Room {
     fn update(&mut self, state: &Option<State>) -> Option<State> {
         for i in &mut self.objects {
             if let Some(n) = i.update(None, None, None, None, state) {
-                if let State::LeaveRoom = n {
-                    if let Some(ws) = &self.ws {
+                match n {
+                    State::LeaveRoom => {
+                        let Some(ws) = &self.ws else {
+                            return None;
+                        };
                         let msg = serde_json::to_string(&CommandToken::RoomCommand(
                             RoomCommand::LeaveRoom,
                         ))
                         .unwrap();
                         ws.send_text(&msg);
+
+                        return Some(n);
+                    }
+
+                    State::ConfigInput(id) => {
+                        match id {
+                            RoomConfigSwitchId::AllowClosing(value) => {
+                                self.room_config.allow_closing = value;
+                            }
+
+                            RoomConfigSwitchId::AllowCourtStacking(value) => {
+                                self.room_config.allow_court_stacking = value;
+                            }
+
+                            RoomConfigSwitchId::AllowRailing(value) => {
+                                self.room_config.allow_railing = value;
+                            }
+
+                            RoomConfigSwitchId::FreeHit(value) => {
+                                self.room_config.free_hit = value;
+                            }
+
+                            RoomConfigSwitchId::HitterScoring(value) => {
+                                self.room_config.hitter_scoring = value;
+                            }
+
+                            RoomConfigSwitchId::WithJoker(value) => {
+                                self.room_config.with_joker = value;
+                            }
+                        }
+                    }
+
+                    State::ApplyConfig => {
+                        let Some(ws) = &self.ws else {
+                            return None;
+                        };
+
+                        let msg = serde_json::to_string(&CommandToken::RoomCommand(
+                            RoomCommand::EditConfig {
+                                new_config: self.room_config.clone(),
+                            },
+                        ))
+                        .unwrap();
+
+                        ws.send_text(&msg);
+                    }
+                    _ => {
+                        return Some(n);
                     }
                 }
-
-                return Some(n);
             }
         }
 
-        if let Some(ws) = &mut self.ws {
-            if let Some(value) = ws.try_recv() {
-                let deserialized =
-                    serde_json::from_str::<EventToken>(str::from_utf8(&value).unwrap());
+        let Some(ws) = &mut self.ws else {
+            return None;
+        };
 
-                if let Ok(token) = deserialized {
-                    match token {
-                        EventToken::ServerEvent(e) => match e {
-                            ServerEvent::RoomPlayer { players, host_id } => {
-                                let mut arr: Vec<Option<PlayerJoinStruct>> = Vec::new();
-                                for i in 0..4 {
-                                    if let Some(value) = players.get(i) {
-                                        arr.push(Some(PlayerJoinStruct {
-                                            id: *value,
-                                            name_alias: None,
-                                            is_self: *value == self.player_id,
-                                            is_room_host: *value == host_id,
-                                        }));
-                                    } else {
-                                        arr.push(None);
-                                    }
-                                }
+        let Some(value) = ws.try_recv() else {
+            return None;
+        };
 
-                                return Some(State::PlayerJoin(arr));
-                            }
+        let deserialized = serde_json::from_str::<EventToken>(str::from_utf8(&value).unwrap());
 
-                            _ => {}
-                        },
-
-                        EventToken::RoomEvent(e) => {}
-                        EventToken::GameEvent(e) => {}
-                    }
+        let Ok(token) = deserialized else {
+            return None;
+        };
+        match token {
+            EventToken::ServerEvent(e) => match e {
+                ServerEvent::Error(err) => {
+                    println!("{:?}", err);
                 }
-            }
+                _ => {}
+            },
+
+            EventToken::RoomEvent(e) => match e {
+                RoomEvent::RoomConfig(config) => {
+                    self.room_config = config.clone();
+                    return Some(State::ConfigUpdate(config));
+                }
+
+                RoomEvent::RoomPlayer { players, host_id } => {
+                    let mut arr: Vec<Option<PlayerJoinStruct>> = Vec::new();
+                    for i in 0..4 {
+                        if let Some(value) = players.get(i) {
+                            arr.push(Some(PlayerJoinStruct {
+                                id: *value,
+                                name_alias: None,
+                                is_self: *value == self.player_id,
+                                is_room_host: *value == host_id,
+                            }));
+                        } else {
+                            arr.push(None);
+                        }
+                    }
+
+                    return Some(State::RoomPlayers{players: arr, is_host: self.player_id == host_id});
+                }
+
+                _ => {}
+            },
+            EventToken::GameEvent(_) => {}
         }
 
         return None;
@@ -154,7 +226,7 @@ impl Page for Room {
     }
 }
 
-fn load_room_objects(font: Arc<Nunito>) -> Box<dyn Object + Send> {
+fn load_room_objects(font: Arc<Nunito>, room_id: &String) -> Box<dyn Object + Send> {
     let mut quit_room_dialog = DialogueBox::new(
         ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
         ObjectDimension::absolute(800.0, 400.0),
@@ -167,7 +239,7 @@ fn load_room_objects(font: Arc<Nunito>) -> Box<dyn Object + Send> {
         1,
     );
 
-    let mut room_code = Text::new("Kode Room: 2919391379919339557", font.clone());
+    let mut room_code = Text::new(&format!("Kode Room: {}", room_id), font.clone());
 
     let mut wrapper_3_top_top = Container::new(
         ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Start),
@@ -233,7 +305,7 @@ fn load_room_objects(font: Arc<Nunito>) -> Box<dyn Object + Send> {
         6.0,
         font.clone(),
     )
-    .on_click(|| return Some(State::MovePage(Pages::MainMenu)))
+    .on_click(|| return None)
     .set_padding(100.0, 50.0);
 
     let room_config_btn = RegularButton::new(
@@ -427,10 +499,26 @@ fn load_config_dialogue(font: Arc<Nunito>) -> Box<dyn Object + Send> {
         3,
     );
 
-    let switch_1 = load_config_option_switch("Boleh nge-rail", font.clone());
-    let switch_2 = load_config_option_switch("Boleh tumpuk londo", font.clone());
-    let switch_3 = load_config_option_switch("Pukulan bebas", font.clone());
-    let switch_4 = load_config_option_switch("Skor pemukul", font.clone());
+    let switch_1 = load_config_option_switch(
+        "Boleh nge-rail",
+        font.clone(),
+        SwitchButtonId::RoomConfig(RoomConfigSwitchId::AllowRailing(false)),
+    );
+    let switch_2 = load_config_option_switch(
+        "Boleh tumpuk londo",
+        font.clone(),
+        SwitchButtonId::RoomConfig(RoomConfigSwitchId::AllowCourtStacking(false)),
+    );
+    let switch_3 = load_config_option_switch(
+        "Pukulan bebas",
+        font.clone(),
+        SwitchButtonId::RoomConfig(RoomConfigSwitchId::FreeHit(false)),
+    );
+    let switch_4 = load_config_option_switch(
+        "Skor pemukul",
+        font.clone(),
+        SwitchButtonId::RoomConfig(RoomConfigSwitchId::HitterScoring(false)),
+    );
 
     let left_container = Container::new(
         ObjectPosition::dynamic(
@@ -451,12 +539,21 @@ fn load_config_dialogue(font: Arc<Nunito>) -> Box<dyn Object + Send> {
     .set_is_flex(Direction::Y, 25.0)
     .set_padding_all(0.0, 20.0, 0.0, 0.0);
 
-    let switch_5 = load_config_option_switch("Joker", font.clone());
+    let switch_6 = load_config_option_switch(
+        "Boleh nutup",
+        font.clone(),
+        SwitchButtonId::RoomConfig(RoomConfigSwitchId::AllowClosing(false)),
+    );
+    let switch_5 = load_config_option_switch(
+        "Joker",
+        font.clone(),
+        SwitchButtonId::RoomConfig(RoomConfigSwitchId::WithJoker(false)),
+    );
 
     let right_container = Container::new(
         ObjectPosition::dynamic(
             DynamicPosition::End,
-            DynamicPosition::Custom(Arc::new(|px, py, pw, ph| ph * 0.15)),
+            DynamicPosition::Custom(Arc::new(|_, _, _, ph| ph * 0.15)),
         ),
         ObjectDimension::dynamic(
             DynamicDimension::Percent(50.0),
@@ -465,6 +562,7 @@ fn load_config_dialogue(font: Arc<Nunito>) -> Box<dyn Object + Send> {
         ParentState::new(),
         None,
     )
+    .add_child(switch_6)
     .add_child(switch_5)
     .set_is_flex(Direction::Y, 25.0)
     .set_is_flex(Direction::Y, 25.0)
@@ -482,7 +580,8 @@ fn load_config_dialogue(font: Arc<Nunito>) -> Box<dyn Object + Send> {
         6.0,
         font.clone(),
     )
-    .set_is_on_dialogue(3);
+    .set_is_on_dialogue(3)
+    .on_click(|| return Some(State::ApplyConfig));
 
     let cancel_btn = RegularButton::new(
         ObjectPosition::dynamic(DynamicPosition::Grid, DynamicPosition::Center),
@@ -517,7 +616,11 @@ fn load_config_dialogue(font: Arc<Nunito>) -> Box<dyn Object + Send> {
     return Box::new(edit_config_dialogue);
 }
 
-fn load_config_option_switch(text: &str, font: Arc<Nunito>) -> Box<dyn Object + Send + Sync> {
+fn load_config_option_switch(
+    text: &str,
+    font: Arc<Nunito>,
+    id: SwitchButtonId,
+) -> Box<dyn Object + Send + Sync> {
     let switch = SwitchButton::new(
         ObjectPosition::new(
             0.0,
@@ -526,7 +629,8 @@ fn load_config_option_switch(text: &str, font: Arc<Nunito>) -> Box<dyn Object + 
             Some(DynamicPosition::Center),
         ),
         50.0,
-    );
+    )
+    .set_id(id);
     let desc = Text::new(text, font.clone())
         .set_config(TextConfig::new(font.regular.clone(), WHITE, HEADING_5))
         .set_position(ObjectPosition::dynamic(
