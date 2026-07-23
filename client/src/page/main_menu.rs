@@ -13,7 +13,7 @@ use crate::ui::widgets::rectangle::RectangleConfig;
 use crate::ui::widgets::text::{HEADING_1, HEADING_2, Text, TextConfig};
 use crate::ui::widgets::text_input::TextInput;
 use crate::{
-    page::{Page, Pages},
+    page::{Page},
     state::State,
     ui::{
         config::{
@@ -28,13 +28,12 @@ use crate::{
 };
 
 pub struct MainMenu {
-    player_name: String,
     objects: Vec<Box<dyn Object + Send>>,
     room_id_input: String,
 }
 
 impl MainMenu {
-    pub fn new(player_name: &str, font: Arc<Nunito>) -> MainMenu {
+    pub fn new(font: Arc<Nunito>) -> MainMenu {
         let top_container = Container::new(
             ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Start),
             ObjectDimension::dynamic(DynamicDimension::Full, DynamicDimension::Percent(50.0)),
@@ -210,7 +209,6 @@ impl MainMenu {
         join_room_dialogue.add_object_ref(Box::new(join_room_dialogue_bottom_wrapper));
 
         return MainMenu {
-            player_name: String::from(player_name),
             objects: vec![Box::new(container), Box::new(join_room_dialogue)],
             room_id_input: String::new(),
         };
@@ -224,8 +222,6 @@ impl Page for MainMenu {
                 match n {
                     State::InputRoomId(value) => {
                         self.room_id_input = value;
-
-                        println!("{}", self.room_id_input);
                         return None;
                     }
 
