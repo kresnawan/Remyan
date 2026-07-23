@@ -68,6 +68,11 @@ pub async fn handle_join_room(
     }
 
     let chars = params.room_id.as_bytes();
+
+    if chars.len() < 6 {
+        return (StatusCode::BAD_REQUEST, format!("Panjang id room terlalu pendek"));
+    }
+
     let mut room_id = [0u8; 6];
 
     room_id.copy_from_slice(&chars[0..6]);

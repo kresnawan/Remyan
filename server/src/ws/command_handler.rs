@@ -49,7 +49,19 @@ pub async fn handle_room_command(
                         .await;
                 }
             },
-            RoomCommand::EditConfig { new_config } => {}
+            RoomCommand::EditConfig { new_config } => {
+                // Only host could change the room config
+                if let Err(e) = room.edit_config(new_config.clone(), player_id) {
+                    server_room.send_player(EventToken::ServerEvent(ServerEvent::Error(e)), player_id).await;
+                    return true;
+                }
+                
+                server_room.broadcast(
+                    true,
+                    player_id,
+                    EventToken::RoomEvent(RoomEvent::RoomConfig(new_config)),
+                ).await;
+            }
             RoomCommand::SendMessage { message } => {
                 server_room
                     .broadcast(

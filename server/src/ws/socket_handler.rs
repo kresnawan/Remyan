@@ -2,12 +2,10 @@ use std::sync::Arc;
 
 use axum::{
     extract::ws::{Message, WebSocket},
-    serve::Serve,
 };
 use futures_util::{SinkExt, StreamExt};
 use remyan_core::{
-    AppInstance, Player, RoomPlayer,
-    protocol::event::{EventToken, ServerEvent, ServerEventPlayer},
+    AppInstance, protocol::event::{EventToken, RoomEvent, ServerEvent},
 };
 use tokio::sync::mpsc;
 
@@ -42,7 +40,7 @@ pub async fn handle_socket(
         room.broadcast(
             true,
             player_id,
-            EventToken::ServerEvent(ServerEvent::RoomPlayer {
+            EventToken::RoomEvent(RoomEvent::RoomPlayer {
                 players: app_room.player_turns.clone(),
                 host_id: app_room.host_id
             }),
@@ -118,7 +116,7 @@ pub async fn handle_socket(
                     .broadcast(
                         true,
                         1,
-                        EventToken::ServerEvent(ServerEvent::RoomPlayer {
+                        EventToken::RoomEvent(RoomEvent::RoomPlayer {
                             players: app_room.player_turns.clone(),
                             host_id: app_room.host_id,
                         }),
