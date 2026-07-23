@@ -1,24 +1,51 @@
 use macroquad::color::{BLANK, Color};
 
-use crate::ui::{
-    config::{
-        dimension::ObjectDimension,
-        gradient::Gradient,
-        parent::ParentState,
-        position::{DynamicPosition, ObjectPosition},
-    }, traits::{click::Clickable, hover::Hoverable, object::Object}, widgets::rectangle::{Rectangle, RectangleConfig},
+use crate::{
+    state::State::{self, ConfigInput},
+    ui::{
+        config::{
+            dimension::ObjectDimension,
+            gradient::Gradient,
+            parent::ParentState,
+            position::{DynamicPosition, ObjectPosition},
+        },
+        traits::{click::Clickable, hover::Hoverable, object::Object},
+        widgets::rectangle::{Rectangle, RectangleConfig},
+    },
 };
+
+#[derive(Clone)]
+pub enum SwitchButtonId {
+    RoomConfig(RoomConfigSwitchId),
+}
+
+#[derive(Clone, Debug)]
+pub enum RoomConfigSwitchId {
+    AllowCourtStacking(bool),
+    FreeHit(bool),
+    AllowRailing(bool),
+    WithJoker(bool),
+    HitterScoring(bool),
+    AllowClosing(bool),
+}
 
 struct SwitchButtonState {
     is_on: bool,
+    is_disabled: bool,
     is_hovered: bool,
     is_pressed: bool,
-    is_clicked: bool
+    is_clicked: bool,
 }
 
 impl SwitchButtonState {
     pub fn new() -> Self {
-        SwitchButtonState { is_on: false, is_hovered: false, is_pressed: false, is_clicked: false }
+        SwitchButtonState {
+            is_on: false,
+            is_disabled: false,
+            is_hovered: false,
+            is_pressed: false,
+            is_clicked: false,
+        }
     }
 }
 
@@ -28,8 +55,9 @@ struct SwitchButtonComponents {
 }
 
 pub struct SwitchButton {
+    id: Option<SwitchButtonId>,
     components: SwitchButtonComponents,
-    state: SwitchButtonState
+    state: SwitchButtonState,
 }
 
 impl SwitchButton {
@@ -53,9 +81,15 @@ impl SwitchButton {
             RectangleConfig::new(width, Gradient::gray(), 0.0, BLANK),
         );
         SwitchButton {
+            id: None,
             components: SwitchButtonComponents { background, switch },
-            state: SwitchButtonState::new()
+            state: SwitchButtonState::new(),
         }
+    }
+
+    pub fn set_id(mut self, id: SwitchButtonId) -> Self {
+        self.id = Some(id);
+        self
     }
 }
 
@@ -77,34 +111,134 @@ impl Object for SwitchButton {
         parent_y: Option<f32>,
         parent_w: Option<f32>,
         parent_h: Option<f32>,
-        state: &Option<crate::state::State>
-    ) -> Option<crate::state::State>
-    {
+        state: &Option<crate::state::State>,
+    ) -> Option<crate::state::State> {
         self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
         self.update_dimension();
         self.update_alignment();
-        self.update_hover();
+
+        if !self.state.is_disabled {
+            self.update_hover();
+        }
+
         self.update_is_clicked();
 
-        if self.state.is_clicked {
-            if self.state.is_on {
-                self.state.is_on = false;
-                self.components.switch.position.x_dyn = Some(DynamicPosition::Start);
-                self.components.switch.config.color = Gradient::gray();
+        if self.state.is_on {
+            self.components.switch.position.x_dyn = Some(DynamicPosition::End);
+            if self.state.is_disabled {
+                self.components.switch.config.color = Gradient::primary_with_opacity(0.5);
             } else {
-                self.state.is_on = true;
-                self.components.switch.position.x_dyn = Some(DynamicPosition::End);
                 self.components.switch.config.color = Gradient::primary();
+            }
+        } else {
+            self.components.switch.position.x_dyn = Some(DynamicPosition::Start);
+            if self.state.is_disabled {
+                self.components.switch.config.color = Gradient::gray_with_opacity(0.5);
+            } else {
+                self.components.switch.config.color = Gradient::gray();
+            }
+        }
+
+        if self.state.is_clicked {
+            self.state.is_on = !self.state.is_on;
+
+            match self.id.as_ref().unwrap() {
+                SwitchButtonId::RoomConfig(config) => match config {
+                    RoomConfigSwitchId::AllowClosing(_) => {
+                        return Some(ConfigInput(RoomConfigSwitchId::AllowClosing(
+                            self.state.is_on,
+                        )));
+                    }
+
+                    RoomConfigSwitchId::AllowCourtStacking(_) => {
+                        return Some(ConfigInput(RoomConfigSwitchId::AllowCourtStacking(
+                            self.state.is_on,
+                        )));
+                    }
+
+                    RoomConfigSwitchId::AllowRailing(_) => {
+                        return Some(ConfigInput(RoomConfigSwitchId::AllowRailing(
+                            self.state.is_on,
+                        )));
+                    }
+
+                    RoomConfigSwitchId::FreeHit(_) => {
+                        return Some(ConfigInput(RoomConfigSwitchId::FreeHit(self.state.is_on)));
+                    }
+
+                    RoomConfigSwitchId::HitterScoring(_) => {
+                        return Some(ConfigInput(RoomConfigSwitchId::HitterScoring(
+                            self.state.is_on,
+                        )));
+                    }
+
+                    RoomConfigSwitchId::WithJoker(_) => {
+                        return Some(ConfigInput(RoomConfigSwitchId::WithJoker(self.state.is_on)));
+                    }
+                },
             }
         }
 
         self.components.switch.update(
-            Some(self.components.background.position.x + self.components.background.parent.x), 
-            Some(self.components.background.position.y + self.components.background.parent.y), 
-            Some(self.components.background.dimension.width), 
-            Some(self.components.background.dimension.height), 
-            state
+            Some(self.components.background.position.x + self.components.background.parent.x),
+            Some(self.components.background.position.y + self.components.background.parent.y),
+            Some(self.components.background.dimension.width),
+            Some(self.components.background.dimension.height),
+            state,
         );
+
+        let Some(state) = state else {
+            return None;
+        };
+
+        match state {
+            State::ConfigUpdate(new_config) => {
+                match self.id.as_ref().unwrap() {
+                    SwitchButtonId::RoomConfig(config_type) => match config_type {
+                        RoomConfigSwitchId::AllowClosing(_) => {
+                            self.state.is_on = new_config.allow_closing;
+                        }
+                        RoomConfigSwitchId::AllowCourtStacking(_) => {
+                            self.state.is_on = new_config.allow_court_stacking;
+                        }
+                        RoomConfigSwitchId::AllowRailing(_) => {
+                            self.state.is_on = new_config.allow_railing;
+                        }
+                        RoomConfigSwitchId::HitterScoring(_) => {
+                            self.state.is_on = new_config.hitter_scoring;
+                        }
+                        RoomConfigSwitchId::FreeHit(_) => {
+                            self.state.is_on = new_config.free_hit;
+                        }
+                        RoomConfigSwitchId::WithJoker(_) => {
+                            self.state.is_on = new_config.with_joker;
+                        }
+                    },
+                }
+
+                if let Some(SwitchButtonId::RoomConfig(RoomConfigSwitchId::WithJoker(_))) = self.id
+                {
+                    return Some(State::Reset);
+                }
+            }
+
+            State::RoomPlayers {
+                players: _,
+                is_host,
+            } => {
+                if !is_host {
+                    self.state.is_disabled = true;
+
+                    if let Some(SwitchButtonId::RoomConfig(RoomConfigSwitchId::WithJoker(_))) =
+                        self.id
+                    {
+                        return Some(State::Reset);
+                    }
+                }
+            }
+
+            _ => {}
+        }
 
         return None;
     }
@@ -113,7 +247,6 @@ impl Object for SwitchButton {
         self.components.background.draw();
         self.components.switch.draw();
     }
-    
 
     fn get_dimension(&self) -> ObjectDimension {
         self.components.background.dimension.clone()
