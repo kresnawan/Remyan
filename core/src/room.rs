@@ -272,6 +272,15 @@ impl Room {
 
         false
     }
+
+    pub fn edit_config(&mut self, new_config: RoomConfig, player_id: u32) -> Result<(), Error> {
+        if self.host_id != player_id {
+            return Err(Error::NotAHost);
+        }
+
+        self.config = new_config;
+        return Ok(());
+    }
 }
 
 /**

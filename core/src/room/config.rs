@@ -15,6 +15,7 @@ pub struct RoomConfig {
     pub allow_railing: bool,
     pub with_joker: bool,
     pub hitter_scoring: bool,
+    pub allow_closing: bool,
     pub number_of_jokers: NumberOfJokers,
     pub joker_type: Option<Card>,
 }
@@ -26,18 +27,19 @@ impl RoomConfig {
         allow_railing: bool,
         with_joker: bool,
         hitter_scoring: bool,
+        allow_closing: bool,
         number_of_jokers: NumberOfJokers,
         joker_type: Option<Card>,
     ) -> Result<Self, String> {
-
         let mut cfg = Self {
-            allow_court_stacking: allow_court_stacking,
-            free_hit: free_hit,
-            allow_railing: allow_railing,
-            with_joker: with_joker,
-            hitter_scoring: hitter_scoring,
-            number_of_jokers: number_of_jokers,
-            joker_type: joker_type,
+            allow_court_stacking,
+            free_hit,
+            allow_railing,
+            with_joker,
+            allow_closing,
+            hitter_scoring,
+            number_of_jokers,
+            joker_type,
         };
 
         if with_joker {
