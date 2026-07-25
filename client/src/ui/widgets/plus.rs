@@ -39,14 +39,6 @@ impl Plus {
             attribute: attr,
         }
     }
-    pub fn default(attr: PlusAttribute) -> Plus {
-        Plus {
-            position: ObjectPosition::absolute(0.0, 0.0),
-            dimension: ObjectDimension::absolute(0.0, 0.0),
-            parent: ParentState::new(),
-            attribute: attr,
-        }
-    }
 }
 
 impl Object for Plus {

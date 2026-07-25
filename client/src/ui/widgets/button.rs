@@ -1,11 +1,19 @@
 use std::sync::Arc;
 
 use crate::{
-    state::State, ui::{
-        config::{dimension::ObjectDimension, font::Nunito, position::ObjectPosition}, widgets::{rectangle::RectangleConfig, text::TextConfig},
+    state::State,
+    ui::{
+        config::{dimension::ObjectDimension, font::Nunito, position::ObjectPosition},
+        widgets::{rectangle::RectangleConfig, text::TextConfig},
     },
 };
 pub mod regular_button;
+
+#[derive(Debug)]
+pub enum ButtonId {
+    ApplyRoomConfig,
+    StartGame
+}
 
 pub trait Button {
     fn new(
@@ -15,7 +23,7 @@ pub trait Button {
         text_config: TextConfig,
         background_config: RectangleConfig,
         shadow_offset: f32,
-        font: Arc<Nunito>
+        font: Arc<Nunito>,
     ) -> Self;
 
     fn on_click<F>(self, callback: F) -> Self

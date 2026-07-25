@@ -33,7 +33,6 @@ struct SwitchButtonState {
     is_on: bool,
     is_disabled: bool,
     is_hovered: bool,
-    is_pressed: bool,
     is_clicked: bool,
 }
 
@@ -43,7 +42,6 @@ impl SwitchButtonState {
             is_on: false,
             is_disabled: false,
             is_hovered: false,
-            is_pressed: false,
             is_clicked: false,
         }
     }
@@ -216,24 +214,25 @@ impl Object for SwitchButton {
                     },
                 }
 
-                if let Some(SwitchButtonId::RoomConfig(RoomConfigSwitchId::WithJoker(_))) = self.id
-                {
-                    return Some(State::Reset);
-                }
+                // if let Some(SwitchButtonId::RoomConfig(RoomConfigSwitchId::WithJoker(_))) = self.id
+                // {
+                //     return Some(State::Reset);
+                // }
             }
 
             State::RoomPlayers {
                 players: _,
                 is_host,
+                playable: _
             } => {
                 if !is_host {
                     self.state.is_disabled = true;
 
-                    if let Some(SwitchButtonId::RoomConfig(RoomConfigSwitchId::WithJoker(_))) =
-                        self.id
-                    {
-                        return Some(State::Reset);
-                    }
+                    // if let Some(SwitchButtonId::RoomConfig(RoomConfigSwitchId::WithJoker(_))) =
+                    //     self.id
+                    // {
+                    //     return Some(State::Reset);
+                    // }
                 }
             }
 

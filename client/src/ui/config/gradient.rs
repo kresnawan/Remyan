@@ -11,6 +11,20 @@ impl Gradient {
         Gradient { colors, angle }
     }
 
+    pub fn set_opacity(mut self, opacity: f32) -> Self {
+        for i in &mut self.colors {
+            i.a = opacity;
+        }
+
+        self
+    }
+
+    pub fn set_opacity_ref(&mut self, opacity: f32) {
+        for i in &mut self.colors {
+            i.a = opacity;
+        }
+    }
+
     pub fn primary() -> Gradient {
         Gradient::new(
             90.0,
@@ -25,10 +39,7 @@ impl Gradient {
         let mut color_2 = Color::from_hex(0xfc6203);
         color_2.a = opacity;
 
-        Gradient::new(
-            90.0,
-            vec![color_1, color_2],
-        )
+        Gradient::new(90.0, vec![color_1, color_2])
     }
 
     pub fn secondary() -> Gradient {
@@ -52,10 +63,7 @@ impl Gradient {
         let mut color_2 = Color::from_hex(0x5c5c5c);
         color_2.a = opacity;
 
-        Gradient::new(
-            90.0,
-            vec![color_1, color_2],
-        )
+        Gradient::new(90.0, vec![color_1, color_2])
     }
 
     pub fn danger() -> Gradient {

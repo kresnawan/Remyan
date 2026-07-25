@@ -3,7 +3,7 @@ use macroquad::prelude::*;
 
 // a custom getrandom crate backend
 // because we're not using wasm-bindgen to make the WASM binding
-// so that we need a custom backend to get the game compiled
+// so that we need a custom getrandom backend to get the game compiled
 //
 //
 #[cfg(target_arch = "wasm32")]

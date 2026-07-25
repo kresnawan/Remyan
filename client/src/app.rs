@@ -2,6 +2,7 @@ use std::{process::exit, sync::Arc};
 
 use macroquad::{
     color::GREEN,
+    texture::{Texture2D, load_texture},
     window::{clear_background, next_frame},
 };
 use quad_net::{
@@ -40,6 +41,7 @@ pub struct App {
     pub create_room_request: Option<Request>,
     pub get_id_request: Option<Request>,
     pub global_state: Option<State>,
+    pub card_back_texture: Texture2D,
 }
 
 impl App {
@@ -54,11 +56,15 @@ impl App {
             create_room_request: None,
             get_id_request: None,
             global_state: None,
+            card_back_texture: Texture2D::empty(),
         }
     }
 
     pub async fn init(&mut self) {
         self.game_state = GameState::Loading(Loading::Initialization);
+
+        let card_back_texture = load_texture("assets/card/card_back.png").await.unwrap();
+        self.card_back_texture = card_back_texture;
 
         let get_id_req = RequestBuilder::new("http://localhost:6767/auth/id")
             .method(Method::Get)
@@ -85,15 +91,14 @@ impl App {
                 let Some(v) = req.try_recv() else {
                     return;
                 };
-                
+
                 match v {
                     Ok(id) => {
                         let parsed: u32 = id.parse().unwrap();
 
                         println!("{}", parsed);
                         self.player_id = Some(parsed);
-                        self.current_page =
-                            Some(Box::new(MainMenu::new(self.font.clone())));
+                        self.current_page = Some(Box::new(MainMenu::new(self.font.clone())));
                         self.game_state = GameState::Running;
                     }
 
@@ -121,11 +126,15 @@ impl App {
                         self.player_id.unwrap()
                     )) {
                         Ok(ws) => {
-                            self.current_page = Some(Box::new(Room::new(
-                                ws,
-                                room_id.clone(),
-                                self.player_id.unwrap(),
-                            ).load_ui(self.font.clone())))
+                            self.current_page = Some(Box::new(
+                                Room::new(
+                                    ws,
+                                    room_id.clone(),
+                                    self.player_id.unwrap(),
+                                    &self.card_back_texture,
+                                )
+                                .load_ui(self.font.clone()),
+                            ))
                         }
                         Err(err) => {
                             println!("{:#?}", err);
@@ -156,11 +165,15 @@ impl App {
                             response.clone(),
                             self.player_id.unwrap()
                         ))) {
-                            self.current_page = Some(Box::new(Room::new(
-                                ws,
-                                response,
-                                self.player_id.unwrap(),
-                            ).load_ui(self.font.clone())))
+                            self.current_page = Some(Box::new(
+                                Room::new(
+                                    ws,
+                                    response,
+                                    self.player_id.unwrap(),
+                                    &self.card_back_texture,
+                                )
+                                .load_ui(self.font.clone()),
+                            ))
                         }
                     }
                     Err(http_error) => {

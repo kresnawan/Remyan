@@ -2,21 +2,25 @@ use std::sync::Arc;
 
 use macroquad::{
     color::{BLACK, BLANK, Color, WHITE},
+    texture::Texture2D,
     window::{screen_height, screen_width},
 };
 use quad_net::web_socket::WebSocket;
 use remyan_core::{
-    NumberOfJokers, Player, RoomConfig, protocol::{
-        command::{CommandToken, RoomCommand}, event::{EventToken, RoomEvent, ServerEvent},
+    NumberOfJokers, RoomConfig,
+    protocol::{
+        command::{CommandToken, RoomCommand},
+        event::{EventToken, RoomEvent, ServerEvent},
     },
 };
 
 use crate::{
+    page::in_game::InGame,
     state::PlayerJoinStruct,
     ui::{
         config::dimension::DynamicDimension,
         widgets::{
-            button::Button,
+            button::{Button, ButtonId},
             container::Direction,
             switch_button::{RoomConfigSwitchId, SwitchButton, SwitchButtonId},
             text::{HEADING_5, TextConfig},
@@ -25,7 +29,7 @@ use crate::{
 };
 
 use crate::{
-    page::{Page, Pages},
+    page::Page,
     state::State,
     ui::{
         config::{
@@ -49,19 +53,25 @@ use crate::{
 };
 
 pub struct Room {
-    players: Vec<Player>,
+    card_back_texture: Texture2D,
     room_id: String,
     room_config: RoomConfig,
     objects: Vec<Box<dyn Object + Send>>,
     ws: Option<WebSocket>,
-    player_id: u32
+    player_id: u32,
+    in_game_page: Option<InGame>,
 }
 
 impl Room {
-    pub fn new(ws: WebSocket, room_id: String, player_id: u32) -> Self {
+    pub fn new(
+        ws: WebSocket,
+        room_id: String,
+        player_id: u32,
+        card_back_texture: &Texture2D,
+    ) -> Self {
         Self {
-            players: Vec::new(),
             objects: Vec::new(),
+            card_back_texture: card_back_texture.clone(),
             room_config: RoomConfig {
                 allow_court_stacking: false,
                 free_hit: false,
@@ -75,6 +85,7 @@ impl Room {
             ws: Some(ws),
             room_id,
             player_id,
+            in_game_page: None,
         }
     }
 
@@ -90,9 +101,16 @@ impl Room {
 
 impl Page for Room {
     fn update(&mut self, state: &Option<State>) -> Option<State> {
+        if let Some(page) = &mut self.in_game_page {
+            page.update(state);
+        }
+
         for i in &mut self.objects {
             if let Some(n) = i.update(None, None, None, None, state) {
                 match n {
+                    State::StartGame => {
+                        self.in_game_page = Some(InGame::new(&self.card_back_texture));
+                    }
                     State::LeaveRoom => {
                         let Some(ws) = &self.ws else {
                             return None;
@@ -106,33 +124,31 @@ impl Page for Room {
                         return Some(n);
                     }
 
-                    State::ConfigInput(id) => {
-                        match id {
-                            RoomConfigSwitchId::AllowClosing(value) => {
-                                self.room_config.allow_closing = value;
-                            }
-
-                            RoomConfigSwitchId::AllowCourtStacking(value) => {
-                                self.room_config.allow_court_stacking = value;
-                            }
-
-                            RoomConfigSwitchId::AllowRailing(value) => {
-                                self.room_config.allow_railing = value;
-                            }
-
-                            RoomConfigSwitchId::FreeHit(value) => {
-                                self.room_config.free_hit = value;
-                            }
-
-                            RoomConfigSwitchId::HitterScoring(value) => {
-                                self.room_config.hitter_scoring = value;
-                            }
-
-                            RoomConfigSwitchId::WithJoker(value) => {
-                                self.room_config.with_joker = value;
-                            }
+                    State::ConfigInput(id) => match id {
+                        RoomConfigSwitchId::AllowClosing(value) => {
+                            self.room_config.allow_closing = value;
                         }
-                    }
+
+                        RoomConfigSwitchId::AllowCourtStacking(value) => {
+                            self.room_config.allow_court_stacking = value;
+                        }
+
+                        RoomConfigSwitchId::AllowRailing(value) => {
+                            self.room_config.allow_railing = value;
+                        }
+
+                        RoomConfigSwitchId::FreeHit(value) => {
+                            self.room_config.free_hit = value;
+                        }
+
+                        RoomConfigSwitchId::HitterScoring(value) => {
+                            self.room_config.hitter_scoring = value;
+                        }
+
+                        RoomConfigSwitchId::WithJoker(value) => {
+                            self.room_config.with_joker = value;
+                        }
+                    },
 
                     State::ApplyConfig => {
                         let Some(ws) = &self.ws else {
@@ -197,7 +213,11 @@ impl Page for Room {
                         }
                     }
 
-                    return Some(State::RoomPlayers{players: arr, is_host: self.player_id == host_id});
+                    return Some(State::RoomPlayers {
+                        players: arr,
+                        is_host: self.player_id == host_id,
+                        playable: players.len() > 2,
+                    });
                 }
 
                 _ => {}
@@ -207,21 +227,26 @@ impl Page for Room {
 
         return None;
     }
+
     fn draw(&self) {
-        draw_rectangle_extended(
-            0.0,
-            0.0,
-            screen_width(),
-            screen_height(),
-            0.0,
-            Color::from_hex(0x7d0202),
-            Color::from_hex(0x2b0000),
-            30.0,
-            0.0,
-            BLACK,
-        );
-        for i in &self.objects {
-            i.draw();
+        if let Some(page) = &self.in_game_page {
+            page.draw();
+        } else {
+            draw_rectangle_extended(
+                0.0,
+                0.0,
+                screen_width(),
+                screen_height(),
+                0.0,
+                Color::from_hex(0x7d0202),
+                Color::from_hex(0x2b0000),
+                30.0,
+                0.0,
+                BLACK,
+            );
+            for i in &self.objects {
+                i.draw();
+            }
         }
     }
 }
@@ -305,8 +330,9 @@ fn load_room_objects(font: Arc<Nunito>, room_id: &String) -> Box<dyn Object + Se
         6.0,
         font.clone(),
     )
-    .on_click(|| return None)
+    .on_click(|| return Some(State::StartGame))
     .set_padding(100.0, 50.0);
+    // .set_id(ButtonId::StartGame);
 
     let room_config_btn = RegularButton::new(
         ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::Start),
@@ -523,7 +549,7 @@ fn load_config_dialogue(font: Arc<Nunito>) -> Box<dyn Object + Send> {
     let left_container = Container::new(
         ObjectPosition::dynamic(
             DynamicPosition::Start,
-            DynamicPosition::Custom(Arc::new(|px, py, pw, ph| ph * 0.15)),
+            DynamicPosition::Custom(Arc::new(|_, _, _, ph| ph * 0.15)),
         ),
         ObjectDimension::dynamic(
             DynamicDimension::Percent(50.0),
@@ -581,7 +607,10 @@ fn load_config_dialogue(font: Arc<Nunito>) -> Box<dyn Object + Send> {
         font.clone(),
     )
     .set_is_on_dialogue(3)
-    .on_click(|| return Some(State::ApplyConfig));
+    .on_click(|| return Some(State::ApplyConfig))
+    .set_id(ButtonId::ApplyRoomConfig);
+
+    println!("{:?}", apply_btn.id);
 
     let cancel_btn = RegularButton::new(
         ObjectPosition::dynamic(DynamicPosition::Grid, DynamicPosition::Center),

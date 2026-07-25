@@ -181,7 +181,7 @@ impl Object for PlayerSlot {
         }
 
         if let Some(value) = state {
-            if let State::RoomPlayers{players, is_host: _} = value {
+            if let State::RoomPlayers{players, is_host: _, playable: _} = value {
                 if let Some(id) = &players[self.index] {
                     self.state.player = Some(id.clone());
                 } else {

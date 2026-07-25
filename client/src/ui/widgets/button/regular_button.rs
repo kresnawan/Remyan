@@ -14,7 +14,7 @@ use crate::{
         },
         traits::{click::Clickable, hover::Hoverable, object::Object, press::Pressable},
         widgets::{
-            button::{Button, ButtonState},
+            button::{Button, ButtonId, ButtonState},
             rectangle::{Rectangle, RectangleConfig},
             text::{Text, TextConfig},
         },
@@ -28,6 +28,7 @@ pub struct RegularButtonComponents {
 }
 
 pub struct RegularButton {
+    pub id: Option<ButtonId>,
     parent: ParentState,
     components: RegularButtonComponents,
     state: ButtonState,
@@ -35,6 +36,8 @@ pub struct RegularButton {
     dialogue_id: Option<u8>,
     shadow_offset: f32,
     is_active: bool,
+    is_shown: bool,
+    is_disabled: bool,
 }
 
 unsafe impl Sync for RegularButton {}
@@ -67,6 +70,11 @@ impl RegularButton {
         self.dialogue_id = Some(id);
         self
     }
+
+    pub fn set_id(mut self, id: ButtonId) -> Self {
+        self.id = Some(id);
+        self
+    }
 }
 
 impl Object for RegularButton {
@@ -95,6 +103,8 @@ impl Object for RegularButton {
             .shadow
             .update(parent_x, parent_y, parent_w, parent_h, state);
 
+        
+
         self.components.shadow.position.x =
             self.components.background.position.x + self.shadow_offset;
         self.components.shadow.position.y =
@@ -114,9 +124,8 @@ impl Object for RegularButton {
         );
 
         self.update_hover();
-        self.state.is_hovered = self.is_active && self.state.is_hovered;
 
-        // this is just naive workaround to disable buttons which 
+        // this is just naive workaround to disable buttons which
         // not contained in currently opened dialogue
         // box so that it's not clicked unintentionally
         //
@@ -126,6 +135,29 @@ impl Object for RegularButton {
         //
         if let Some(state) = state {
             match state {
+                State::RoomPlayers {
+                    players: _,
+                    is_host,
+                    playable,
+                } => {
+                    if let Some(id) = &self.id {
+                        match id {
+                            ButtonId::ApplyRoomConfig => {
+                                self.is_shown = *is_host;
+                            }
+
+                            ButtonId::StartGame => {
+                                if *playable {
+                                    self.is_disabled = false;
+                                } else {
+                                    self.is_disabled = true;
+                                }
+
+                                return Some(State::Reset);
+                            }
+                        }
+                    };
+                }
                 State::OpenDialogueBox(id) => {
                     if !self.is_on_dialogue {
                         self.is_active = false;
@@ -163,6 +195,12 @@ impl Object for RegularButton {
             self.components.background.config.color = Gradient::primary();
         }
 
+        if self.is_disabled {
+            self.components.background.config.color.set_opacity_ref(0.5);
+        } else {
+            self.components.background.config.color.set_opacity_ref(1.0);
+        }
+
         if let Some(event) = &mut self.state.on_click_event {
             if self.state.is_clicked {
                 if let Some(n) = event() {
@@ -177,9 +215,11 @@ impl Object for RegularButton {
     }
 
     fn draw(&self) {
-        self.components.shadow.draw();
-        self.components.background.draw();
-        self.components.text.draw();
+        if self.is_shown {
+            self.components.shadow.draw();
+            self.components.background.draw();
+            self.components.text.draw();
+        }
     }
 
     fn get_dimension(&self) -> ObjectDimension {
@@ -257,6 +297,7 @@ impl Button for RegularButton {
 
         RegularButton {
             parent: ParentState::new(),
+            id: None,
             components: RegularButtonComponents {
                 background,
                 text,
@@ -267,6 +308,8 @@ impl Button for RegularButton {
             shadow_offset,
             dialogue_id: None,
             is_active: true,
+            is_shown: true,
+            is_disabled: false
         }
     }
 
@@ -281,7 +324,7 @@ impl Button for RegularButton {
 
 impl Hoverable for RegularButton {
     fn set_is_hovered(&mut self, value: bool) {
-        self.state.is_hovered = value;
+        self.state.is_hovered = value && self.is_shown && self.is_active && !self.is_disabled;
     }
 
     fn get_is_hovered(&self) -> bool {
