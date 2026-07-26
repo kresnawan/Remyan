@@ -15,9 +15,7 @@ use remyan_core::{
 };
 
 use crate::{
-    page::in_game::InGame,
-    state::PlayerJoinStruct,
-    ui::{
+    app::CardTextures, page::in_game::InGame, state::PlayerJoinStruct, ui::{
         config::dimension::DynamicDimension,
         widgets::{
             button::{Button, ButtonId},
@@ -53,7 +51,7 @@ use crate::{
 };
 
 pub struct Room {
-    card_back_texture: Texture2D,
+    card_textures: Arc<CardTextures>,
     room_id: String,
     room_config: RoomConfig,
     objects: Vec<Box<dyn Object + Send>>,
@@ -67,11 +65,10 @@ impl Room {
         ws: WebSocket,
         room_id: String,
         player_id: u32,
-        card_back_texture: &Texture2D,
+        card_textures: Arc<CardTextures>
     ) -> Self {
         Self {
             objects: Vec::new(),
-            card_back_texture: card_back_texture.clone(),
             room_config: RoomConfig {
                 allow_court_stacking: false,
                 free_hit: false,
@@ -86,6 +83,7 @@ impl Room {
             room_id,
             player_id,
             in_game_page: None,
+            card_textures
         }
     }
 
@@ -103,13 +101,15 @@ impl Page for Room {
     fn update(&mut self, state: &Option<State>) -> Option<State> {
         if let Some(page) = &mut self.in_game_page {
             page.update(state);
+
+            return None;
         }
 
         for i in &mut self.objects {
             if let Some(n) = i.update(None, None, None, None, state) {
                 match n {
                     State::StartGame => {
-                        self.in_game_page = Some(InGame::new(&self.card_back_texture));
+                        self.in_game_page = Some(InGame::new(self.card_textures.clone()));
                     }
                     State::LeaveRoom => {
                         let Some(ws) = &self.ws else {

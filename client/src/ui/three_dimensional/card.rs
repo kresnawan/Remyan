@@ -1,5 +1,10 @@
+use std::sync::Arc;
+
 use macroquad::prelude::*;
 
+use crate::{app::CardTextures, ui::three_dimensional::ray::Ray};
+
+#[derive(Clone)]
 pub struct Card {
     pub position: Vec3,
     pub rotation: Vec3,
@@ -59,11 +64,20 @@ impl Card {
         self.is_animating = true;
     }
 
-    pub fn new(position: Vec3, rotation: Vec3, height: f32, card_back_texture: &Texture2D) -> Self {
-        let img_f = Image::gen_image_color(200, 300, BLUE);
-
-        let front_texture = Texture2D::from_image(&img_f);
-        let back_texture = card_back_texture;
+    pub fn new(
+        position: Vec3,
+        rotation: Vec3,
+        height: f32,
+        card: Option<&remyan_core::Card>,
+        card_textures: Arc<CardTextures>,
+    ) -> Self {
+        let front_texture: Texture2D;
+        if let Some(card) = card {
+            front_texture = card_textures.get(card);
+        } else {
+            front_texture = card_textures.get_empty_texture();
+        }
+        let back_texture = card_textures.get_back_texture();
 
         front_texture.set_filter(FilterMode::Linear);
         back_texture.set_filter(FilterMode::Linear);
@@ -86,6 +100,7 @@ impl Card {
             (vec3(-w, h, -z_offset), vec2(1.0, 0.0)),
             (vec3(w, h, -z_offset), vec2(0.0, 0.0)),
         ];
+
         Self {
             position,
             rotation,
@@ -200,5 +215,38 @@ impl Card {
 
         let rotated_offset = rotation.transform_vector3(local_offset);
         base_position + rotated_offset
+    }
+
+    pub fn intersects_ray(&self, ray: &Ray) -> Option<Vec3> {
+        let rotation = Mat4::from_rotation_y(self.rotation.y.to_radians())
+            * Mat4::from_rotation_x(self.rotation.x.to_radians())
+            * Mat4::from_rotation_z(self.rotation.z.to_radians());
+
+        let normal = rotation.transform_vector3(vec3(0.0, 0.0, 1.0)).normalize();
+        let denominator = ray.dir.dot(normal);
+
+        if denominator.abs() < 0.0001 {
+            return None;
+        }
+
+        let t = (self.position - ray.origin).dot(normal) / denominator;
+        if t < 0.0 {
+            return None;
+        }
+
+        let hit_point = ray.origin + ray.dir * t;
+
+        let local_hit = rotation
+            .inverse()
+            .transform_vector3(hit_point - self.position);
+
+        let half_w = self.dimension.x;
+        let half_h = self.dimension.y;
+
+        if local_hit.x.abs() <= half_w && local_hit.y.abs() <= half_h {
+            Some(hit_point)
+        } else {
+            None
+        }
     }
 }

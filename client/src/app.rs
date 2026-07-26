@@ -1,4 +1,4 @@
-use std::{process::exit, sync::Arc};
+use std::{collections::HashMap, process::exit, sync::Arc};
 
 use macroquad::{
     color::GREEN,
@@ -9,6 +9,7 @@ use quad_net::{
     http_request::{Method, Request, RequestBuilder},
     web_socket::WebSocket,
 };
+use remyan_core::{CardIcon, CardType, CourtType, Deck, JokerType, SpotNumber};
 
 use crate::{
     page::{Page, main_menu::MainMenu, room::Room},
@@ -31,6 +32,103 @@ pub enum GameState {
     Uninitialized,
 }
 
+pub struct CardTextures {
+    pub cards: HashMap<remyan_core::Card, Texture2D>,
+    pub empty_texture: Texture2D,
+    pub back_texture: Texture2D,
+}
+
+impl CardTextures {
+    pub async fn load() -> CardTextures {
+        let mut cards: HashMap<remyan_core::Card, Texture2D> = HashMap::new();
+        let mut deck = Deck::new(true);
+        while let Some(card) = deck.cards.pop() {
+            let mut file_name = String::new();
+            if let Some(icon) = card.card_icon {
+                match icon {
+                    CardIcon::Club => {
+                        file_name.push_str("club");
+                    }
+                    CardIcon::Diamond => {
+                        file_name.push_str("diamond");
+                    }
+                    CardIcon::Spade => {
+                        file_name.push_str("spades");
+                    }
+                    CardIcon::Heart => {
+                        file_name.push_str("heart");
+                    }
+                }
+
+                file_name.push_str("-");
+
+                match card.card_type {
+                    CardType::Ace => {
+                        file_name.push_str("01");
+                    }
+                    CardType::Spot(number) => match number {
+                        SpotNumber::Two => file_name.push_str("02"),
+                        SpotNumber::Three => file_name.push_str("03"),
+                        SpotNumber::Four => file_name.push_str("04"),
+                        SpotNumber::Five => file_name.push_str("05"),
+                        SpotNumber::Six => file_name.push_str("06"),
+                        SpotNumber::Seven => file_name.push_str("07"),
+                        SpotNumber::Eight => file_name.push_str("08"),
+                        SpotNumber::Nine => file_name.push_str("09"),
+                        SpotNumber::Ten => file_name.push_str("10"),
+                    },
+
+                    CardType::Court(court) => match court {
+                        CourtType::Jack => file_name.push_str("11"),
+                        CourtType::Queen => file_name.push_str("12"),
+                        CourtType::King => file_name.push_str("13"),
+                    },
+
+                    _ => {}
+                }
+            } else {
+                match card.card_type {
+                    CardType::Joker(joker) => match joker {
+                        JokerType::Black => file_name.push_str("joker-black"),
+                        JokerType::Red => file_name.push_str("joker-red"),
+                    },
+
+                    _ => {}
+                }
+            }
+
+            file_name.push_str(".png");
+
+            let texture = load_texture(&format!("assets/card/{}", file_name))
+                .await
+                .unwrap();
+            cards.insert(card, texture);
+        }
+
+        let empty_texture = load_texture("assets/card/card-empty.png").await.unwrap();
+        let back_texture = load_texture("assets/card/card-back.png").await.unwrap();
+
+        CardTextures {
+            cards,
+            empty_texture,
+            back_texture,
+        }
+    }
+
+    pub fn get(&self, card: &remyan_core::Card) -> Texture2D {
+        let texture = self.cards.get(card).unwrap().clone();
+        texture
+    }
+
+    pub fn get_empty_texture(&self) -> Texture2D {
+        self.empty_texture.clone()
+    }
+
+    pub fn get_back_texture(&self) -> Texture2D {
+        self.back_texture.clone()
+    }
+}
+
 pub struct App {
     pub current_page: Option<Box<dyn Page>>,
     pub game_state: GameState,
@@ -42,6 +140,7 @@ pub struct App {
     pub get_id_request: Option<Request>,
     pub global_state: Option<State>,
     pub card_back_texture: Texture2D,
+    pub card_textures: Option<Arc<CardTextures>>,
 }
 
 impl App {
@@ -57,14 +156,19 @@ impl App {
             get_id_request: None,
             global_state: None,
             card_back_texture: Texture2D::empty(),
+            card_textures: None,
         }
     }
 
     pub async fn init(&mut self) {
         self.game_state = GameState::Loading(Loading::Initialization);
 
-        let card_back_texture = load_texture("assets/card/card_back.png").await.unwrap();
+        let card_back_texture = load_texture("assets/card/card-back.png").await.unwrap();
         self.card_back_texture = card_back_texture;
+
+        let card_textures = Arc::new(CardTextures::load().await);
+
+        self.card_textures = Some(card_textures);
 
         let get_id_req = RequestBuilder::new("http://localhost:6767/auth/id")
             .method(Method::Get)
@@ -131,7 +235,7 @@ impl App {
                                     ws,
                                     room_id.clone(),
                                     self.player_id.unwrap(),
-                                    &self.card_back_texture,
+                                    self.card_textures.as_ref().unwrap().clone()
                                 )
                                 .load_ui(self.font.clone()),
                             ))
@@ -170,7 +274,7 @@ impl App {
                                     ws,
                                     response,
                                     self.player_id.unwrap(),
-                                    &self.card_back_texture,
+                                    self.card_textures.as_ref().unwrap().clone()
                                 )
                                 .load_ui(self.font.clone()),
                             ))
