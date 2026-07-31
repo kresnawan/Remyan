@@ -1,9 +1,7 @@
-use crate::{Card, CardType};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum NumberOfJokers {
-    None,
     Two,
     Four,
 }
@@ -13,11 +11,9 @@ pub struct RoomConfig {
     pub allow_court_stacking: bool,
     pub free_hit: bool,
     pub allow_railing: bool,
-    pub with_joker: bool,
+    pub joker: Option<NumberOfJokers>,
     pub hitter_scoring: bool,
     pub allow_closing: bool,
-    pub number_of_jokers: NumberOfJokers,
-    pub joker_type: Option<Card>,
 }
 
 impl RoomConfig {
@@ -25,39 +21,30 @@ impl RoomConfig {
         allow_court_stacking: bool,
         free_hit: bool,
         allow_railing: bool,
-        with_joker: bool,
+        joker: Option<NumberOfJokers>,
         hitter_scoring: bool,
         allow_closing: bool,
-        number_of_jokers: NumberOfJokers,
-        joker_type: Option<Card>,
     ) -> Result<Self, String> {
-        let mut cfg = Self {
+        let cfg = Self {
             allow_court_stacking,
             free_hit,
             allow_railing,
-            with_joker,
             allow_closing,
             hitter_scoring,
-            number_of_jokers,
-            joker_type,
+            joker,
         };
 
-        if with_joker {
-            match joker_type {
-                Some(n) => match n.card_type {
-                    CardType::Spot(_) => {
-                        cfg.joker_type = Some(n);
-                    }
-                    _ => {
-                        return Err(String::from(
-                            "Tipe joker harus angka biasa [Create Session Config gagal]",
-                        ));
-                    }
-                },
-                None => {}
-            }
-        }
-
         Ok(cfg)
+    }
+
+    pub fn default() -> Self {
+        Self {
+            allow_court_stacking: false,
+            free_hit: false,
+            allow_railing: false,
+            joker: None,
+            hitter_scoring: false,
+            allow_closing: false,
+        }
     }
 }

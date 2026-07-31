@@ -1,4 +1,6 @@
+#[cfg(feature = "pake-rand")]
 use rand::seq::SliceRandom;
+
 use strum::IntoEnumIterator;
 
 use crate::{Card, CardIcon, CardType, CourtType, JokerType, SpotNumber};
@@ -72,6 +74,7 @@ impl Deck {
         return Self { cards: deck };
     }
 
+    #[cfg(feature = "pake-rand")]
     pub fn shuffle(&mut self) {
         let mut rng = rand::rng();
         self.cards.shuffle(&mut rng);

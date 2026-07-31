@@ -32,7 +32,7 @@ pub struct Room {
 impl Room {
     pub fn new(cfg: RoomConfig, host_id: u32) -> Result<Self, String> {
         let new_session_player = RoomPlayer::new();
-        let deck = Deck::new_exp();
+        let deck = Deck::new(true);
 
         let mut players = HashMap::new();
         players.insert(host_id, new_session_player);
@@ -52,6 +52,7 @@ impl Room {
         });
     }
 
+    #[cfg(feature = "pake-rand")]
     fn share_cards(&mut self) {
         self.deck.shuffle();
         // Share cards
@@ -68,6 +69,7 @@ impl Room {
         }
     }
 
+    #[cfg(feature = "pake-rand")]
     pub fn start_game(&mut self, game_id: u32, player_id: u32) -> Result<(), Error> {
         if self.host_id != player_id {
             return Err(Error::NotAHost);
@@ -360,6 +362,10 @@ impl Room {
 
     pub fn handle_discard(&mut self, player_id: u32, card: Card) -> Result<Card, Error> {
         let player = self.players.get_mut(&player_id).unwrap();
+
+        if let CardType::Joker(_) = card.card_type {
+            return Err(Error::DiscardAJoker)
+        }
 
         if card.card_type == CardType::Ace && player.melded_cards.is_empty() {
             return Err(Error::RequireMeld);

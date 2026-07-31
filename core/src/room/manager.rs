@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+
+#[cfg(feature = "pake-rand")]
 use rand::RngExt;
 
 use crate::{Room, RoomConfig};
@@ -10,6 +12,8 @@ pub struct RoomManager {
 }
 
 impl RoomManager {
+
+    #[cfg(feature = "pake-rand")]
     fn generate_room_id() -> [u8; 6] {
         const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
 
@@ -24,10 +28,12 @@ impl RoomManager {
         result
     }
 
+    #[cfg(feature = "pake-rand")]
     pub fn generate_player_id() -> u32 {
         rand::rng().random()
     }
 
+    #[cfg(feature = "pake-rand")]
     pub fn insert_room(&mut self, host_id: u32, cfg: RoomConfig) -> Result<[u8; 6], String> {
         if self.check_if_player_in_a_room(host_id) {
             return Err(format!(

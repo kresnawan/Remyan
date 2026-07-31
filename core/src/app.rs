@@ -77,6 +77,7 @@ impl App {
         Ok(())
     }
 
+    #[cfg(feature = "pake-rand")]
     pub fn create_room(&mut self, host_id: u32, cfg: RoomConfig) -> Result<[u8; 6], String> {
         // match self.get_player_status(host_id) {
         //     Some(n) => match n {

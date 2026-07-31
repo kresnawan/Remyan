@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 pub mod command;
 pub mod event;
 
-#[derive(Deserialize, Serialize, Debug,PartialEq)]
+#[derive(Deserialize, Serialize, Debug,PartialEq, Clone)]
 pub enum DrawSource {
     StockPile,
     DiscardPile,
@@ -21,4 +21,5 @@ pub enum Error {
     InvalidCommand,
     RequireMeld,
     NotATurn,
+    DiscardAJoker
 }

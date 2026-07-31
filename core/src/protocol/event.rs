@@ -18,9 +18,6 @@ pub struct ServerEventPlayer {
 #[derive(Deserialize, Serialize, Debug)]
 pub enum ServerEvent {
     Error(Error),
-    PlayerCard(Vec<Card>),
-    DrawnCard(Card),
-    
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -29,15 +26,18 @@ pub enum RoomEvent {
     Message { message: String, sender_id: u32 },
     RoomPlayer{ players: Vec<u32>, host_id: u32 },
     RoomConfig(RoomConfig),
-    GameEnded
+    GameEnded,
+    
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub enum GameEvent {
-    Put { player_id: u32, cards: Vec<Card> },
-    Make { player_id: u32, cards: Vec<Card> },
+    Meld { player_id: u32, cards: Vec<Card> },
     Turn(TurnEvent),
     CurrentTurn(u32),
+    PlayersTurn(Vec<u32>),
+    PlayerCard(Vec<Card>),
+    DrawnCard(Card),
 }
 
 #[derive(Deserialize, Serialize, Debug)]

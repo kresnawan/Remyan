@@ -5,7 +5,7 @@ use axum::{
 };
 use futures_util::{SinkExt, StreamExt};
 use remyan_core::{
-    AppInstance, protocol::event::{EventToken, RoomEvent, ServerEvent},
+    AppInstance, protocol::event::{EventToken, RoomEvent},
 };
 use tokio::sync::mpsc;
 

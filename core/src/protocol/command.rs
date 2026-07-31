@@ -16,18 +16,15 @@ pub enum RoomCommand {
     LeaveRoom
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub enum GameCommand {
-    Put {
-        cards: Vec<Card>
-    },
-    Make {
+    Meld {
         cards: Vec<Card>
     },
     Turn(TurnCommand)
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub enum TurnCommand {
     Draw(DrawSource),
     Discard(Card),

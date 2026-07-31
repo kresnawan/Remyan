@@ -1,5 +1,5 @@
 use axum::extract::ws::{Message, Utf8Bytes};
-use remyan_core::{Room, protocol::event::{EventToken, ServerEvent}};
+use remyan_core::{Room, protocol::event::{EventToken, GameEvent, ServerEvent}};
 use std::collections::HashMap;
 
 use crate::Tx;
@@ -35,7 +35,7 @@ impl ServerRoom {
 
             let core_player = room.players.get(&pid).unwrap();
 
-            let token = EventToken::ServerEvent(ServerEvent::PlayerCard(core_player.hand_cards.clone()));
+            let token = EventToken::GameEvent(GameEvent::PlayerCard(core_player.hand_cards.clone()));
             let serialized = serde_json::to_string(&token).unwrap();
             let payload = Utf8Bytes::from(serialized);
 

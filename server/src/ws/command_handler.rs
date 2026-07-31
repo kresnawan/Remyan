@@ -35,13 +35,22 @@ pub async fn handle_room_command(
                     server_room
                         .broadcast(
                             true,
+                            0,
+                            EventToken::GameEvent(GameEvent::PlayersTurn(
+                                room.player_turns.clone(),
+                            )),
+                        )
+                        .await;
+                    server_room.broadcast_card(&room).await;
+                    server_room
+                        .broadcast(
+                            true,
                             player_id,
                             EventToken::GameEvent(GameEvent::CurrentTurn(
                                 room.player_turns[room.current_turn.index],
                             )),
                         )
                         .await;
-                    server_room.broadcast_card(&room).await;
                 }
                 Err(err) => {
                     server_room
@@ -52,15 +61,19 @@ pub async fn handle_room_command(
             RoomCommand::EditConfig { new_config } => {
                 // Only host could change the room config
                 if let Err(e) = room.edit_config(new_config.clone(), player_id) {
-                    server_room.send_player(EventToken::ServerEvent(ServerEvent::Error(e)), player_id).await;
+                    server_room
+                        .send_player(EventToken::ServerEvent(ServerEvent::Error(e)), player_id)
+                        .await;
                     return true;
                 }
-                
-                server_room.broadcast(
-                    true,
-                    player_id,
-                    EventToken::RoomEvent(RoomEvent::RoomConfig(new_config)),
-                ).await;
+
+                server_room
+                    .broadcast(
+                        true,
+                        player_id,
+                        EventToken::RoomEvent(RoomEvent::RoomConfig(new_config)),
+                    )
+                    .await;
             }
             RoomCommand::SendMessage { message } => {
                 server_room
@@ -133,7 +146,7 @@ pub async fn handle_game_command(
                             Ok(res) => {
                                 server_room
                                     .broadcast(
-                                        false,
+                                        true,
                                         player_id,
                                         EventToken::GameEvent(GameEvent::Turn(
                                             TurnEvent::Discard {
@@ -162,7 +175,7 @@ pub async fn handle_game_command(
                                     Ok(res) => {
                                         server_room
                                             .broadcast(
-                                                false,
+                                                true,
                                                 player_id,
                                                 EventToken::GameEvent(GameEvent::Turn(
                                                     TurnEvent::Draw {
@@ -174,9 +187,7 @@ pub async fn handle_game_command(
                                             .await;
                                         server_room
                                             .send_player(
-                                                EventToken::ServerEvent(ServerEvent::DrawnCard(
-                                                    res,
-                                                )),
+                                                EventToken::GameEvent(GameEvent::DrawnCard(res)),
                                                 player_id,
                                             )
                                             .await;
@@ -197,7 +208,7 @@ pub async fn handle_game_command(
                                     Ok(res) => {
                                         server_room
                                             .broadcast(
-                                                false,
+                                                true,
                                                 player_id,
                                                 EventToken::GameEvent(GameEvent::Turn(
                                                     TurnEvent::Draw {
@@ -209,9 +220,7 @@ pub async fn handle_game_command(
                                             .await;
                                         server_room
                                             .send_player(
-                                                EventToken::ServerEvent(ServerEvent::DrawnCard(
-                                                    res,
-                                                )),
+                                                EventToken::GameEvent(GameEvent::DrawnCard(res)),
                                                 player_id,
                                             )
                                             .await;
@@ -231,33 +240,13 @@ pub async fn handle_game_command(
                     }
                 }
             }
-            GameCommand::Make { cards } => match room.handle_meld(player_id, cards) {
+            GameCommand::Meld { cards } => match room.handle_meld(player_id, cards) {
                 Ok(res) => {
                     server_room
                         .broadcast(
-                            false,
+                            true,
                             player_id,
-                            EventToken::GameEvent(GameEvent::Make {
-                                player_id,
-                                cards: res,
-                            }),
-                        )
-                        .await;
-                }
-                Err(err) => {
-                    server_room
-                        .send_player(EventToken::ServerEvent(ServerEvent::Error(err)), player_id)
-                        .await;
-                    return;
-                }
-            },
-            GameCommand::Put { cards } => match room.handle_put(player_id, cards) {
-                Ok(res) => {
-                    server_room
-                        .broadcast(
-                            false,
-                            player_id,
-                            EventToken::GameEvent(GameEvent::Put {
+                            EventToken::GameEvent(GameEvent::Meld {
                                 player_id,
                                 cards: res,
                             }),
