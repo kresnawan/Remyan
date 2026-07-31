@@ -116,13 +116,10 @@ impl Object for Container {
     }
     fn update(
         &mut self,
-        parent_x: Option<f32>,
-        parent_y: Option<f32>,
-        parent_w: Option<f32>,
-        parent_h: Option<f32>,
+        parent_state: ParentState,
         state: &Option<State>,
     ) -> Option<State> {
-        self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
+        self.update_parent_state(parent_state.clone());
         self.update_dimension();
         self.update_alignment();
 
@@ -210,12 +207,11 @@ impl Object for Container {
             }
         }
 
+        let self_ps = self.as_parent_state();
+
         for i in &mut self.objects {
             if let Some(n) = i.update(
-                Some(self.position.x + self.parent.x + self.padding_l),
-                Some(self.position.y + self.parent.y + self.padding_t),
-                Some(self.dimension.width - (self.padding_r + self.padding_l)),
-                Some(self.dimension.height - (self.padding_b + self.padding_t)),
+                self_ps.clone(),
                 state,
             ) {
                 return Some(n);

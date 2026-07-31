@@ -64,13 +64,10 @@ impl Object for Rectangle {
     }
     fn update(
         &mut self,
-        parent_x: Option<f32>,
-        parent_y: Option<f32>,
-        parent_w: Option<f32>,
-        parent_h: Option<f32>,
+        parent_state: ParentState,
         _: &Option<State>
     ) -> Option<State> {
-        self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
+        self.update_parent_state(parent_state);
         self.update_dimension();
         self.update_alignment();
 

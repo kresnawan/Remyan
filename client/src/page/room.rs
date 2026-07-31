@@ -2,12 +2,11 @@ use std::sync::Arc;
 
 use macroquad::{
     color::{BLACK, BLANK, Color, WHITE},
-    texture::Texture2D,
     window::{screen_height, screen_width},
 };
 use quad_net::web_socket::WebSocket;
 use remyan_core::{
-    NumberOfJokers, RoomConfig,
+    RoomConfig,
     protocol::{
         command::{CommandToken, RoomCommand},
         event::{EventToken, RoomEvent, ServerEvent},
@@ -15,11 +14,15 @@ use remyan_core::{
 };
 
 use crate::{
-    app::CardTextures, page::in_game::InGame, state::PlayerJoinStruct, ui::{
+    app::CardTextures,
+    page::in_game::InGame,
+    state::PlayerJoinStruct,
+    ui::{
         config::dimension::DynamicDimension,
         widgets::{
             button::{Button, ButtonId},
             container::Direction,
+            room_config_dialogue_box::RoomConfigDialogueBox,
             switch_button::{RoomConfigSwitchId, SwitchButton, SwitchButtonId},
             text::{HEADING_5, TextConfig},
         },
@@ -65,25 +68,16 @@ impl Room {
         ws: WebSocket,
         room_id: String,
         player_id: u32,
-        card_textures: Arc<CardTextures>
+        card_textures: Arc<CardTextures>,
     ) -> Self {
         Self {
             objects: Vec::new(),
-            room_config: RoomConfig {
-                allow_court_stacking: false,
-                free_hit: false,
-                allow_railing: false,
-                with_joker: false,
-                hitter_scoring: false,
-                allow_closing: false,
-                number_of_jokers: NumberOfJokers::None,
-                joker_type: None,
-            },
+            room_config: RoomConfig::default(),
             ws: Some(ws),
             room_id,
             player_id,
             in_game_page: None,
-            card_textures
+            card_textures,
         }
     }
 
@@ -100,85 +94,89 @@ impl Room {
 impl Page for Room {
     fn update(&mut self, state: &Option<State>) -> Option<State> {
         if let Some(page) = &mut self.in_game_page {
-            page.update(state);
+            if let Some(in_game_state) = page.update(state) {
+                if let State::InGameCommand(command) = in_game_state {
+                    let msg = serde_json::to_string(&CommandToken::GameCommand(command)).unwrap();
+                    self.ws.as_ref().unwrap().send_text(&msg);
+                }
+            }
+        } else {
+            for i in &mut self.objects {
+                if let Some(n) = i.update(ParentState::root(), state) {
+                    match n {
+                        State::StartGame => {
+                            let msg = serde_json::to_string(&CommandToken::RoomCommand(
+                                RoomCommand::StartGame,
+                            ))
+                            .unwrap();
+                            self.ws.as_ref().unwrap().send_text(&msg);
+                        }
+                        State::LeaveRoom => {
+                            let Some(ws) = &self.ws else {
+                                return None;
+                            };
+                            let msg = serde_json::to_string(&CommandToken::RoomCommand(
+                                RoomCommand::LeaveRoom,
+                            ))
+                            .unwrap();
+                            ws.send_text(&msg);
 
-            return None;
-        }
-
-        for i in &mut self.objects {
-            if let Some(n) = i.update(None, None, None, None, state) {
-                match n {
-                    State::StartGame => {
-                        self.in_game_page = Some(InGame::new(self.card_textures.clone()));
-                    }
-                    State::LeaveRoom => {
-                        let Some(ws) = &self.ws else {
-                            return None;
-                        };
-                        let msg = serde_json::to_string(&CommandToken::RoomCommand(
-                            RoomCommand::LeaveRoom,
-                        ))
-                        .unwrap();
-                        ws.send_text(&msg);
-
-                        return Some(n);
-                    }
-
-                    State::ConfigInput(id) => match id {
-                        RoomConfigSwitchId::AllowClosing(value) => {
-                            self.room_config.allow_closing = value;
+                            return Some(n);
                         }
 
-                        RoomConfigSwitchId::AllowCourtStacking(value) => {
-                            self.room_config.allow_court_stacking = value;
+                        State::ConfigInput(id) => match id {
+                            RoomConfigSwitchId::AllowClosing(value) => {
+                                self.room_config.allow_closing = value;
+                            }
+
+                            RoomConfigSwitchId::AllowCourtStacking(value) => {
+                                self.room_config.allow_court_stacking = value;
+                            }
+
+                            RoomConfigSwitchId::AllowRailing(value) => {
+                                self.room_config.allow_railing = value;
+                            }
+
+                            RoomConfigSwitchId::FreeHit(value) => {
+                                self.room_config.free_hit = value;
+                            }
+
+                            RoomConfigSwitchId::HitterScoring(value) => {
+                                self.room_config.hitter_scoring = value;
+                            }
+
+                            _ => {}
+                        },
+
+                        State::ApplyConfig => {
+                            let Some(ws) = &self.ws else {
+                                return None;
+                            };
+
+                            let msg = serde_json::to_string(&CommandToken::RoomCommand(
+                                RoomCommand::EditConfig {
+                                    new_config: self.room_config.clone(),
+                                },
+                            ))
+                            .unwrap();
+
+                            ws.send_text(&msg);
                         }
-
-                        RoomConfigSwitchId::AllowRailing(value) => {
-                            self.room_config.allow_railing = value;
+                        _ => {
+                            return Some(n);
                         }
-
-                        RoomConfigSwitchId::FreeHit(value) => {
-                            self.room_config.free_hit = value;
-                        }
-
-                        RoomConfigSwitchId::HitterScoring(value) => {
-                            self.room_config.hitter_scoring = value;
-                        }
-
-                        RoomConfigSwitchId::WithJoker(value) => {
-                            self.room_config.with_joker = value;
-                        }
-                    },
-
-                    State::ApplyConfig => {
-                        let Some(ws) = &self.ws else {
-                            return None;
-                        };
-
-                        let msg = serde_json::to_string(&CommandToken::RoomCommand(
-                            RoomCommand::EditConfig {
-                                new_config: self.room_config.clone(),
-                            },
-                        ))
-                        .unwrap();
-
-                        ws.send_text(&msg);
-                    }
-                    _ => {
-                        return Some(n);
                     }
                 }
             }
         }
 
+        // Handle message from WebSocket connection
         let Some(ws) = &mut self.ws else {
             return None;
         };
-
         let Some(value) = ws.try_recv() else {
             return None;
         };
-
         let deserialized = serde_json::from_str::<EventToken>(str::from_utf8(&value).unwrap());
 
         let Ok(token) = deserialized else {
@@ -189,7 +187,6 @@ impl Page for Room {
                 ServerEvent::Error(err) => {
                     println!("{:?}", err);
                 }
-                _ => {}
             },
 
             EventToken::RoomEvent(e) => match e {
@@ -220,9 +217,19 @@ impl Page for Room {
                     });
                 }
 
+                RoomEvent::StartGame => {
+                    self.in_game_page =
+                        Some(InGame::new(self.card_textures.clone(), self.player_id));
+                }
+                RoomEvent::GameEnded => {
+                    println!("Game selesai")
+                }
+
                 _ => {}
             },
-            EventToken::GameEvent(_) => {}
+            EventToken::GameEvent(event) => {
+                self.in_game_page.as_mut().unwrap().handle_game_event(event);
+            }
         }
 
         return None;
@@ -331,8 +338,8 @@ fn load_room_objects(font: Arc<Nunito>, room_id: &String) -> Box<dyn Object + Se
         font.clone(),
     )
     .on_click(|| return Some(State::StartGame))
-    .set_padding(100.0, 50.0);
-    // .set_id(ButtonId::StartGame);
+    .set_padding(100.0, 50.0)
+    .set_id(ButtonId::StartGame);
 
     let room_config_btn = RegularButton::new(
         ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::Start),
@@ -521,7 +528,12 @@ fn load_config_dialogue(font: Arc<Nunito>) -> Box<dyn Object + Send> {
     let mut edit_config_dialogue = DialogueBox::new(
         ObjectPosition::dynamic(DynamicPosition::Center, DynamicPosition::Center),
         ObjectDimension::absolute(800.0, 500.0),
-        RectangleConfig::new(5.0, Gradient::new(0.0, vec![BLACK]), 2.0, WHITE),
+        RectangleConfig::new(
+            5.0,
+            Gradient::new(0.0, vec![Color::from_hex(0x181d30)]),
+            2.0,
+            Color::from_hex(0x242b45),
+        ),
         3,
     );
 
@@ -669,7 +681,7 @@ fn load_config_option_switch(
 
     let container = Container::new(
         ObjectPosition::dynamic(DynamicPosition::Start, DynamicPosition::Grid),
-        ObjectDimension::new(0.0, 50.0, Some(DynamicDimension::Full), None),
+        ObjectDimension::new(0.0, 50.0, Some(DynamicDimension::Percent(90.)), None),
         ParentState::new(),
         None,
     )

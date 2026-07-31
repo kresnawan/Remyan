@@ -10,15 +10,18 @@ use macroquad::{
     text::draw_text,
     window::clear_background,
 };
-use remyan_core::Deck;
+use remyan_core::{
+    Card, Deck,
+    protocol::{
+        DrawSource,
+        command::{GameCommand, TurnCommand},
+        event::{GameEvent, TurnEvent},
+    },
+};
 
 use crate::{
-    app::CardTextures,
-    page::Page,
-    state::State,
-    ui::{
-        three_dimensional::{card::Card, ray::get_mouse_ray},
-        traits::object::Object,
+    app::CardTextures, page::Page, state::State, ui::{
+        config::parent::ParentState, three_dimensional::{card::CardElement, ray::get_mouse_ray, turn_arrow::TurnArrow}, traits::object::Object,
     },
 };
 
@@ -27,36 +30,91 @@ use macroquad::prelude::*;
 const STOCK_PILE_POS: Vec3 = vec3(2.0, 0., -3.);
 const STOCK_PILE_ROT: Vec3 = vec3(90.0, 0.0, 0.0);
 
+enum PlayerPlacement {
+    Left,
+    Front,
+    Right,
+    Me,
+}
+
 pub struct InGame {
     objects: Vec<Box<dyn Object>>,
-    cam_x: f32,
-    cam_y: f32,
-    cam_z: f32,
-    cam_up_x: f32,
-    cam_up_y: f32,
-    cam_up_z: f32,
-    cam_target_x: f32,
-    cam_target_y: f32,
-    cam_target_z: f32,
-    is_started: bool,
-    stock_pile: Vec<Card>,
-    discard_pile: Vec<Card>,
-    opp_1_hand: Vec<Card>,
-    hand: Vec<Card>,
+    self_id: u32,
+    is_sharing_card: Option<PlayerPlacement>,
+    shared_cards: u8,
+    player_turns: Vec<u32>,
+    self_index: usize,
+    stock_pile: Vec<CardElement>,
+    discard_pile: Vec<CardElement>,
+    opp_1_hand: Vec<CardElement>,
+    opp_2_hand: Vec<CardElement>,
+    opp_3_hand: Vec<CardElement>,
+    hand: Vec<CardElement>,
     hovered_card_index: Option<usize>,
     selected_card_index: Option<usize>,
     camera: Camera3D,
+    is_hover_stock_pile: bool,
     is_melding: bool,
-    melded_cards: Vec<Vec<Card>>,
-    chosen_cards_for_meld: Vec<usize>,
+    melded_cards: Vec<CardElement>,
+    opp_1_melded_cards: Vec<CardElement>,
+    opp_2_melded_cards: Vec<CardElement>,
+    opp_3_melded_cards: Vec<CardElement>,
+    selected_cards_for_meld: Vec<usize>,
+    self_cards: Vec<Card>,
+    current_index_share: usize,
+    elapsed_time: f32,
+    target_time: f32,
+    turn_arrow: TurnArrow,
 }
 
 impl InGame {
-    pub fn init_stock_pile(card_textures: Arc<CardTextures>) -> Vec<Card> {
-        let deck = Deck::new(true);
-        let mut result: Vec<Card> = Vec::new();
+    pub fn new(card_textures: Arc<CardTextures>, self_id: u32) -> Self {
+        let cam = Camera3D {
+            position: vec3(-3.5, 4.0, 0.0),
+            up: vec3(0.0, 1.0, 0.0),
+            target: vec3(0., 0., 0.),
+            ..Default::default()
+        };
+
+        let stock_pile = InGame::init_stock_pile(card_textures.clone());
+        println!("{}", stock_pile.len());
+        return Self {
+            discard_pile: Vec::new(),
+            player_turns: Vec::new(),
+            self_id,
+            self_index: 0,
+            objects: Vec::new(),
+            hand: Vec::new(),
+            is_sharing_card: None,
+            shared_cards: 0,
+            stock_pile,
+            is_hover_stock_pile: false,
+            selected_card_index: None,
+            opp_1_hand: Vec::new(),
+            opp_2_hand: Vec::new(),
+            opp_3_hand: Vec::new(),
+            self_cards: Vec::new(),
+            hovered_card_index: None,
+            camera: cam,
+            current_index_share: 0,
+            elapsed_time: 0.,
+            is_melding: false,
+            melded_cards: Vec::new(),
+            opp_1_melded_cards: Vec::new(),
+            opp_2_melded_cards: Vec::new(),
+            opp_3_melded_cards: Vec::new(),
+            selected_cards_for_meld: Vec::new(),
+            turn_arrow: TurnArrow::new(card_textures),
+            target_time: 0.0,
+        };
+    }
+
+    fn init_stock_pile(card_textures: Arc<CardTextures>) -> Vec<CardElement> {
+        let mut deck = Deck::new(true);
+        deck.shuffle();
+        let mut result: Vec<CardElement> = Vec::new();
         for i in deck.cards {
-            let mut new_card = Card::new(
+            let mut new_card = CardElement::new(
                 STOCK_PILE_POS,
                 STOCK_PILE_ROT,
                 0.8,
@@ -64,44 +122,83 @@ impl InGame {
                 card_textures.clone(),
             );
 
-            new_card.target_pos.y = (result.len() as f32 - 1.) * 0.002;
+            new_card.set_target(
+                vec3(
+                    new_card.position.x,
+                    (result.len() as f32 - 1.) * 0.002,
+                    new_card.position.z,
+                ),
+                new_card.rotation,
+            );
             result.push(new_card);
         }
 
         result
     }
-    pub fn new(card_textures: Arc<CardTextures>) -> Self {
-        let cam = Camera3D {
-            position: vec3(-3.0, 4.0, 0.0),
-            up: vec3(0.0, 1.0, 0.0),
-            target: vec3(0., 0., 0.),
-            ..Default::default()
-        };
-        let stock_pile = InGame::init_stock_pile(card_textures.clone());
-        return Self {
-            discard_pile: Vec::new(),
-            objects: Vec::new(),
-            cam_x: -3.0,
-            // cam_y: 0.,
-            hand: Vec::new(),
-            cam_y: 4.,
-            cam_z: 0.0,
-            cam_up_x: 0.0,
-            cam_up_y: 1.0,
-            cam_up_z: 0.0,
-            cam_target_x: 0.0,
-            cam_target_y: 0.0,
-            cam_target_z: 0.0,
-            is_started: false,
-            stock_pile,
-            selected_card_index: None,
-            opp_1_hand: Vec::new(),
-            hovered_card_index: None,
-            camera: cam,
-            is_melding: false,
-            melded_cards: Vec::new(),
-            chosen_cards_for_meld: Vec::new(),
-        };
+
+    fn get_placement(&self, player_id: u32) -> Option<PlayerPlacement> {
+        let n = self.player_turns.len();
+
+        if n == 4 {
+            if self.player_turns[(self.self_index + 1) % n] == player_id {
+                Some(PlayerPlacement::Right)
+            } else if self.player_turns[(self.self_index + 2) % n] == player_id {
+                Some(PlayerPlacement::Front)
+            } else if self.player_turns[(self.self_index + 3) % n] == player_id {
+                Some(PlayerPlacement::Left)
+            } else if player_id == self.self_id {
+                Some(PlayerPlacement::Me)
+            } else {
+                None
+            }
+        } else if n == 3 {
+            if self.self_index == 1 {
+                if self.player_turns[0] == player_id {
+                    Some(PlayerPlacement::Left)
+                } else if self.player_turns[2] == player_id {
+                    Some(PlayerPlacement::Right)
+                } else {
+                    Some(PlayerPlacement::Me)
+                }
+            } else if self.self_index == 0 {
+                if self.player_turns[1] == player_id {
+                    Some(PlayerPlacement::Right)
+                } else if self.player_turns[2] == player_id {
+                    Some(PlayerPlacement::Front)
+                } else {
+                    Some(PlayerPlacement::Me)
+                }
+            } else if self.self_index == 2 {
+                if self.player_turns[1] == player_id {
+                    Some(PlayerPlacement::Left)
+                } else if self.player_turns[0] == player_id {
+                    Some(PlayerPlacement::Front)
+                } else {
+                    Some(PlayerPlacement::Me)
+                }
+            } else {
+                None
+            }
+        } else {
+            return None;
+        }
+    }
+
+    pub fn update_stock_pile_hover(&mut self) {
+        let ray = get_mouse_ray(&self.camera);
+        let mut is_hovering = false;
+
+        let mut arr = self.stock_pile.iter().rev().peekable();
+        let top_card = arr.peek();
+
+        if let Some(card) = top_card {
+            let a = card.intersects_ray(&ray);
+            if let Some(_) = a {
+                is_hovering = true;
+            }
+        }
+
+        self.is_hover_stock_pile = is_hovering;
     }
 
     pub fn update_card_interaction(&mut self) {
@@ -120,16 +217,19 @@ impl InGame {
     }
 
     fn meld(&mut self) {
-        let mut arr: Vec<Card> = Vec::new();
         let mut previous_index = usize::MIN;
 
         let mut offset: usize = 0;
 
-        for i in &self.chosen_cards_for_meld {
+        for i in &self.selected_cards_for_meld {
             let mut transformed_index = *i;
 
             if previous_index <= transformed_index {
-                transformed_index -= offset;
+                if offset > transformed_index {
+                    transformed_index = 0;
+                } else {
+                    transformed_index -= offset;
+                }
 
                 offset += 1;
             }
@@ -138,42 +238,51 @@ impl InGame {
 
             card.set_target(vec3(-1.5, 0., 0.), vec3(90., 90., 0.));
 
-            arr.push(card);
-            previous_index = *i;
+            self.melded_cards.push(card);
+            previous_index = transformed_index;
         }
 
-        self.chosen_cards_for_meld.clear();
-        self.melded_cards.push(arr);
+        self.selected_cards_for_meld.clear();
+
         self.rearrange_hand();
         self.rearrange_melded_cards();
         self.is_melding = false;
     }
 
-    fn rearrange_each_melded_cards(&mut self, index: usize) {
-        let spacing_x = 0.1;
-        let spacing_z = 0.002;
-        let count = self.melded_cards[index].len() as f32;
-
-        let start_z = ((count - 1.0) * spacing_x) / 2.0 + (index as f32);
-
-        let base_target_pos = vec3(-1.5, 0., start_z);
-
-        self.melded_cards[index][0].target_pos = base_target_pos;
-        self.melded_cards[index][0].target_rot = vec3(90., 90.0, 0.0);
-
-        for i in 1..self.melded_cards[index].len() {
-            let new_target_pos = Card::get_indexed_position(
-                base_target_pos,
-                self.melded_cards[index][0].rotation,
-                i,
-                spacing_x,
-                spacing_z,
-            );
-
-            let card = &mut self.melded_cards[index][i];
-            card.target_pos = new_target_pos;
-            card.target_rot = vec3(90., 90.0, 0.0);
+    fn meld_opp_1_cards(&mut self, cards: Vec<Card>) {
+        for card in cards {
+            if let Some(mut card_element) = self.opp_1_hand.pop() {
+                card_element.set_card(Some(&card));
+                self.opp_1_melded_cards.push(card_element);
+            }
         }
+
+        self.rearrange_opp_1_hand();
+        self.rearrange_opp_1_melded_cards();
+    }
+
+    fn meld_opp_2_cards(&mut self, cards: Vec<Card>) {
+        for card in cards {
+            if let Some(mut card_element) = self.opp_2_hand.pop() {
+                card_element.set_card(Some(&card));
+                self.opp_2_melded_cards.push(card_element);
+            }
+        }
+
+        self.rearrange_opp_2_hand();
+        self.rearrange_opp_2_melded_cards();
+    }
+
+    fn meld_opp_3_cards(&mut self, cards: Vec<Card>) {
+        for card in cards {
+            if let Some(mut card_element) = self.opp_3_hand.pop() {
+                card_element.set_card(Some(&card));
+                self.opp_3_melded_cards.push(card_element);
+            }
+        }
+
+        self.rearrange_opp_3_hand();
+        self.rearrange_opp_3_melded_cards();
     }
 
     fn rearrange_melded_cards(&mut self) {
@@ -181,8 +290,113 @@ impl InGame {
             return;
         }
 
-        for i in 0..self.melded_cards.len() {
-            self.rearrange_each_melded_cards(i);
+        let spacing_x = -0.1;
+        let spacing_z = 0.002;
+        let count = self.melded_cards.len() as f32;
+
+        let start_x = ((count - 1.0) * spacing_x) / 2.0;
+        let base_target_pos = vec3(-1.5, 0., start_x);
+
+        self.melded_cards[0].set_target(base_target_pos, vec3(270., 90., 0.0));
+
+        for i in 1..self.melded_cards.len() {
+            let new_target_pos = CardElement::get_indexed_position(
+                base_target_pos,
+                self.melded_cards[0].rotation,
+                i as f32,
+                spacing_x,
+                spacing_z,
+            );
+
+            let card = &mut self.melded_cards[i];
+            card.set_target(new_target_pos, vec3(270., 90., 0.0));
+        }
+    }
+
+    fn rearrange_opp_1_melded_cards(&mut self) {
+        if self.opp_1_melded_cards.is_empty() {
+            return;
+        }
+
+        let spacing_x = 0.1;
+        let spacing_z = 0.002;
+        let count = self.opp_1_melded_cards.len() as f32;
+
+        let start_x = ((count - 1.0) * spacing_x) / 2.0;
+        let base_target_pos = vec3(start_x, 0., -1.5);
+        let target_rot = vec3(-90., 0., 180.0);
+
+        self.opp_1_melded_cards[0].set_target(base_target_pos, target_rot);
+
+        for i in 1..self.opp_1_melded_cards.len() {
+            let new_target_pos = CardElement::get_indexed_position(
+                base_target_pos,
+                target_rot,
+                i as f32,
+                spacing_x,
+                spacing_z,
+            );
+
+            let card = &mut self.opp_1_melded_cards[i];
+            card.set_target(new_target_pos, target_rot);
+        }
+    }
+
+    fn rearrange_opp_2_melded_cards(&mut self) {
+        if self.opp_2_melded_cards.is_empty() {
+            return;
+        }
+
+        let spacing_x = 0.1;
+        let spacing_z = 0.002;
+        let count = self.opp_2_melded_cards.len() as f32;
+
+        let start_x = ((count - 1.0) * -spacing_x) / 2.0;
+        let base_target_pos = vec3(start_x, 0., 1.5);
+        let target_rot = vec3(-90., 0., 0.0);
+
+        self.opp_2_melded_cards[0].set_target(base_target_pos, target_rot);
+
+        for i in 1..self.opp_2_melded_cards.len() {
+            let new_target_pos = CardElement::get_indexed_position(
+                base_target_pos,
+                target_rot,
+                i as f32,
+                spacing_x,
+                spacing_z,
+            );
+
+            let card = &mut self.opp_2_melded_cards[i];
+            card.set_target(new_target_pos, target_rot);
+        }
+    }
+
+    fn rearrange_opp_3_melded_cards(&mut self) {
+        if self.opp_3_melded_cards.is_empty() {
+            return;
+        }
+
+        let spacing_x = 0.1;
+        let spacing_z = 0.002;
+        let count = self.opp_3_melded_cards.len() as f32;
+
+        let start_x = ((count - 1.0) * spacing_x) / 2.0;
+        let base_target_pos = vec3(1.5, 0., start_x);
+        let target_rot = vec3(-90., 90., 0.0);
+
+        self.opp_3_melded_cards[0].set_target(base_target_pos, target_rot);
+
+        for i in 1..self.opp_3_melded_cards.len() {
+            let new_target_pos = CardElement::get_indexed_position(
+                base_target_pos,
+                target_rot,
+                i as f32,
+                spacing_x,
+                spacing_z,
+            );
+
+            let card = &mut self.opp_3_melded_cards[i];
+            card.set_target(new_target_pos, target_rot);
         }
     }
 
@@ -196,24 +410,79 @@ impl InGame {
         let count = self.opp_1_hand.len() as f32;
 
         let start_x = ((count - 1.0) * -spacing_x) / 2.0;
-
         let base_target_pos = vec3(start_x, 0.8 / 2., -2.5);
+        let target_rot = vec3(0.0, 180.0, 0.0);
 
-        self.opp_1_hand[0].target_pos = base_target_pos;
-        self.opp_1_hand[0].target_rot = vec3(0.0, 180.0, 0.0);
+        self.opp_1_hand[0].set_target_with_dim(base_target_pos, target_rot, 0.8);
 
         for i in 1..self.opp_1_hand.len() {
-            let new_target_pos = Card::get_indexed_position(
+            let new_target_pos = CardElement::get_indexed_position(
                 base_target_pos,
-                self.opp_1_hand[0].rotation,
-                i,
+                target_rot,
+                i as f32,
                 -spacing_x,
                 spacing_z,
             );
 
             let card = &mut self.opp_1_hand[i];
-            card.target_pos = new_target_pos;
-            card.target_rot = vec3(0.0, 180.0, 0.0);
+            card.set_target_with_dim(new_target_pos, target_rot, 0.8);
+        }
+    }
+
+    fn rearrange_opp_2_hand(&mut self) {
+        if self.opp_2_hand.is_empty() {
+            return;
+        }
+
+        let spacing_x = 0.16;
+        let spacing_z = 0.002;
+        let count = self.opp_2_hand.len() as f32;
+
+        let start_x = ((count - 1.0) * -spacing_x) / 2.0;
+        let base_target_pos = vec3(start_x, 0.8 / 2., 2.5);
+
+        self.opp_2_hand[0].set_target_with_dim(base_target_pos, vec3(0.0, 0., 0.0), 0.8);
+
+        for i in 1..self.opp_2_hand.len() {
+            let new_target_pos = CardElement::get_indexed_position(
+                base_target_pos,
+                self.opp_2_hand[0].rotation,
+                i as f32,
+                spacing_x,
+                -spacing_z,
+            );
+
+            let card = &mut self.opp_2_hand[i];
+            card.set_target_with_dim(new_target_pos, vec3(0.0, 0., 0.0), 0.8);
+        }
+    }
+
+    fn rearrange_opp_3_hand(&mut self) {
+        if self.opp_3_hand.is_empty() {
+            return;
+        }
+
+        let spacing_x = 0.16;
+        let spacing_z = 0.002;
+        let count = self.opp_3_hand.len() as f32;
+
+        let start_x = ((count - 1.0) * spacing_x) / 2.0;
+        let base_target_pos = vec3(2.5, 0.8 / 2., start_x);
+        let target_rot = vec3(0.0, 90., 0.0);
+
+        self.opp_3_hand[0].set_target_with_dim(base_target_pos, target_rot, 0.8);
+
+        for i in 1..self.opp_3_hand.len() {
+            let new_target_pos = CardElement::get_indexed_position(
+                base_target_pos,
+                target_rot,
+                i as f32,
+                spacing_x,
+                -spacing_z,
+            );
+
+            let card = &mut self.opp_3_hand[i];
+            card.set_target_with_dim(new_target_pos, target_rot, 0.8);
         }
     }
 
@@ -227,26 +496,24 @@ impl InGame {
         let count = self.hand.len() as f32;
 
         let start_z = ((count - 1.0) * spacing_x) / 2.0;
+        let base_target_pos = vec3(-1.8, 0.8 / 2., start_z);
+        let x_degree = self.calculate_look_at_cam_tilt(base_target_pos) + 180.;
+        let target_rot = vec3(x_degree, 90.0, 0.0);
 
-        let base_target_pos = vec3(-1.5, 0.8 / 2., start_z);
-
-        self.hand[0].target_pos = base_target_pos;
-        self.hand[0].target_rot = vec3(self.calculate_look_at_tilt(base_target_pos) - 180., 90.0, 0.0);
+        self.hand[0].set_target_with_dim(base_target_pos, target_rot, 0.8);
 
         for i in 1..self.hand.len() {
-            let new_target_pos = Card::get_indexed_position(
+            let new_target_pos = CardElement::get_indexed_position(
                 base_target_pos,
-                self.hand[0].rotation,
-                i,
+                target_rot,
+                i as f32,
                 spacing_x,
                 spacing_z,
             );
 
-            let x_degree = self.calculate_look_at_tilt(new_target_pos) - 180.;
-
             let card = &mut self.hand[i];
-            card.target_pos = new_target_pos;
-            card.target_rot = vec3(x_degree, 90.0, 0.0);
+
+            card.set_target_with_dim(new_target_pos, target_rot, 0.8);
         }
     }
 
@@ -259,28 +526,58 @@ impl InGame {
         let spacing_z = 0.002;
 
         let base_target_pos = vec3(-1.5, 0.8 / 2., 2.);
+        let x_degree = self.calculate_look_at_cam_tilt(base_target_pos);
 
-        self.hand[0].target_pos = base_target_pos;
-        self.hand[0].target_rot = vec3(self.calculate_look_at_tilt(base_target_pos), 90.0, 0.0);
+        self.hand[0].set_target(base_target_pos, vec3(x_degree, 90.0, 0.0));
 
         for i in 1..self.hand.len() {
-            let new_target_pos = Card::get_indexed_position(
+            let new_target_pos = CardElement::get_indexed_position(
                 base_target_pos,
                 self.hand[0].rotation,
-                i,
+                i as f32,
                 spacing_x,
                 spacing_z,
             );
 
-            let x_degree = self.calculate_look_at_tilt(new_target_pos);
+            let x_degree = self.calculate_look_at_cam_tilt(new_target_pos);
 
             let card = &mut self.hand[i];
-            card.target_pos = new_target_pos;
-            card.target_rot = vec3(x_degree, 90.0, 0.0);
+            card.set_target(new_target_pos, vec3(x_degree, 90.0, 0.0));
         }
     }
 
-    fn discard_from_opp_1_hand(&mut self) {
+    fn discard_from_hand(&mut self, card_type: Card) {
+        let mut index: Option<usize> = None;
+        for i in 0..self.hand.len() {
+            if let Some(card_element) = &self.hand[i].card {
+                if card_element == &card_type {
+                    index = Some(i);
+                    break;
+                }
+            }
+        }
+
+        if index.is_none() {
+            return;
+        }
+
+        if self.hand.len() - 1 >= index.unwrap() {
+            let mut card = self.hand.remove(index.unwrap());
+            let rand_rot_y: f32 = rand::gen_range(90. - 7.5, 90.0 + 15.);
+            let rand_x: f32 = rand::gen_range(-0.125, 0.125);
+            let rand_z: f32 = rand::gen_range(-0.125, 0.125);
+
+            card.set_target_with_dim(
+                vec3(rand_x, self.discard_pile.len() as f32 * 0.001, rand_z),
+                vec3(270.0, rand_rot_y, 0.0),
+                1.2,
+            );
+            self.discard_pile.push(card);
+            self.rearrange_hand();
+        }
+    }
+
+    fn discard_from_opp_1_hand(&mut self, card_type: Card) {
         if let Some(mut card) = self.opp_1_hand.pop() {
             let rand_rot_y: f32 = rand::gen_range(0.0, 360.0);
             let rand_x: f32 = rand::gen_range(-0.125, 0.125);
@@ -291,14 +588,14 @@ impl InGame {
                 vec3(-90.0, rand_rot_y, 0.0),
                 1.2,
             );
+            card.set_card(Some(&card_type));
             self.discard_pile.push(card);
             self.rearrange_opp_1_hand();
         }
     }
 
-    fn discard_from_hand(&mut self, index: usize) {
-        if self.hand.len() - 1 >= index {
-            let mut card = self.hand.remove(index);
+    fn discard_from_opp_2_hand(&mut self, card_type: Card) {
+        if let Some(mut card) = self.opp_2_hand.pop() {
             let rand_rot_y: f32 = rand::gen_range(0.0, 360.0);
             let rand_x: f32 = rand::gen_range(-0.125, 0.125);
             let rand_z: f32 = rand::gen_range(-0.125, 0.125);
@@ -308,69 +605,211 @@ impl InGame {
                 vec3(-90.0, rand_rot_y, 0.0),
                 1.2,
             );
+            card.set_card(Some(&card_type));
             self.discard_pile.push(card);
-            self.rearrange_hand();
+            self.rearrange_opp_2_hand();
         }
     }
 
-    fn draw_for_opp_1_hand(&mut self) {
-        if let Some(mut new_card) = self.stock_pile.pop() {
-            new_card.set_target(self.get_opp_1_hand_next_pos(), vec3(0.0, 180.0, 0.0));
-            self.opp_1_hand.push(new_card);
+    fn discard_from_opp_3_hand(&mut self, card_type: Card) {
+        if let Some(mut card) = self.opp_3_hand.pop() {
+            let rand_rot_y: f32 = rand::gen_range(0.0, 360.0);
+            let rand_x: f32 = rand::gen_range(-0.125, 0.125);
+            let rand_z: f32 = rand::gen_range(-0.125, 0.125);
 
-            self.rearrange_opp_1_hand();
+            card.set_target_with_dim(
+                vec3(rand_x, self.discard_pile.len() as f32 * 0.001, rand_z),
+                vec3(-90.0, rand_rot_y, 0.0),
+                1.2,
+            );
+            card.set_card(Some(&card_type));
+            self.discard_pile.push(card);
+            self.rearrange_opp_3_hand();
         }
     }
 
-    pub fn calculate_look_at_tilt(&self, card_pos: Vec3) -> f32 {
-        let delta_x = (self.cam_x - self.cam_y).abs();
-        let delta_y = self.cam_y - card_pos.y;
+    fn pop_from_stock_pile(&mut self) -> Option<CardElement> {
+        if let Some(card) = self.stock_pile.pop() {
+            return Some(card);
+        }
+
+        return None;
+    }
+
+    fn pop_from_discard_pile(&mut self) -> Option<CardElement> {
+        if let Some(card) = self.discard_pile.pop() {
+            return Some(card);
+        }
+
+        return None;
+    }
+
+    fn draw_for_hand(&mut self, card: CardElement) {
+        self.hand.push(card);
+
+        self.rearrange_hand();
+    }
+
+    fn draw_for_opp_1(&mut self, card: CardElement) {
+        self.opp_1_hand.push(card);
+
+        self.rearrange_opp_1_hand();
+    }
+
+    fn draw_for_opp_2(&mut self, card: CardElement) {
+        self.opp_2_hand.push(card);
+
+        self.rearrange_opp_2_hand();
+    }
+
+    fn draw_for_opp_3(&mut self, card: CardElement) {
+        self.opp_3_hand.push(card);
+
+        self.rearrange_opp_3_hand();
+    }
+
+    pub fn calculate_look_at_cam_tilt(&self, card_pos: Vec3) -> f32 {
+        let delta_x = (self.camera.position.x - self.camera.position.y).abs();
+        let delta_y = self.camera.position.y - card_pos.y;
 
         let tilt_angle_deg = f32::atan2(delta_x, delta_y).to_degrees();
 
         tilt_angle_deg
     }
 
-    fn draw_for_hand(&mut self) {
-        if let Some(mut new_card) = self.stock_pile.pop() {
-            let next_pos = self.get_hand_next_pos();
+    pub fn handle_game_event(&mut self, event: GameEvent) {
+        match event {
+            GameEvent::CurrentTurn(player_id) => {
+                let placement = self.get_placement(player_id).unwrap();
+                let current_arrow_angle = self.turn_arrow.target_rot.y % 360.;
+                let minus_angle: f32;
+                match placement {
+                    PlayerPlacement::Left => {
+                        minus_angle = 360. - current_arrow_angle;
+                    }
+                    PlayerPlacement::Front => {
+                        minus_angle = 270. - current_arrow_angle;
+                    }
+                    PlayerPlacement::Right => {
+                        minus_angle = 180. - current_arrow_angle;
+                    }
+                    PlayerPlacement::Me => {
+                        minus_angle = 90. - current_arrow_angle;
+                    }
+                }
 
-            new_card.set_target(
-                next_pos,
-                vec3(self.calculate_look_at_tilt(next_pos), 90.0, 0.0),
-            );
-            self.hand.push(new_card);
+                self.turn_arrow
+                    .set_target(self.turn_arrow.target_rot + vec3(0., minus_angle, 0.));
+            }
+            GameEvent::Meld { player_id, cards } => {
+                let placement = self.get_placement(player_id).unwrap();
 
-            self.rearrange_hand();
+                match placement {
+                    PlayerPlacement::Left => {
+                        self.meld_opp_1_cards(cards);
+                    }
+
+                    PlayerPlacement::Front => {
+                        self.meld_opp_3_cards(cards);
+                    }
+
+                    PlayerPlacement::Right => {
+                        self.meld_opp_2_cards(cards);
+                    }
+
+                    PlayerPlacement::Me => {
+                        self.meld();
+                    }
+                }
+            }
+            GameEvent::Turn(turn) => match turn {
+                TurnEvent::Discard { player_id, card } => {
+                    let placement = self.get_placement(player_id).unwrap();
+                    match placement {
+                        PlayerPlacement::Left => {
+                            self.discard_from_opp_1_hand(card);
+                        }
+                        PlayerPlacement::Front => {
+                            self.discard_from_opp_3_hand(card);
+                        }
+                        PlayerPlacement::Right => {
+                            self.discard_from_opp_2_hand(card);
+                        }
+                        PlayerPlacement::Me => {
+                            self.discard_from_hand(card);
+                        }
+                    }
+                }
+                TurnEvent::Draw { player_id, source } => {
+                    let placement = self.get_placement(player_id).unwrap();
+                    let card: Option<CardElement>;
+
+                    match source {
+                        DrawSource::StockPile => match placement {
+                            PlayerPlacement::Me => {
+                                card = None;
+                            }
+                            _ => {
+                                card = self.pop_from_stock_pile();
+                            }
+                        },
+                        DrawSource::DiscardPile => {
+                            card = self.pop_from_discard_pile();
+                        }
+                    }
+
+                    if let Some(card_element) = card {
+                        match placement {
+                            PlayerPlacement::Left => {
+                                self.draw_for_opp_1(card_element);
+                            }
+                            PlayerPlacement::Front => {
+                                self.draw_for_opp_3(card_element);
+                            }
+                            PlayerPlacement::Right => {
+                                self.draw_for_opp_2(card_element);
+                            }
+
+                            // a card drawn by a player will received via GameEvent::DrawnCard(Card)
+                            // since they need to know the card type
+                            PlayerPlacement::Me => {
+                                if let DrawSource::DiscardPile = source {
+                                    self.draw_for_hand(card_element);
+                                }
+                            }
+                        }
+
+                        println!("{}", self.stock_pile.len());
+                    }
+
+                    
+                }
+            },
+            GameEvent::PlayersTurn(arr) => {
+                for i in 0..arr.len() {
+                    if arr[i] == self.self_id {
+                        self.self_index = i;
+                        break;
+                    }
+                }
+                self.player_turns = arr;
+            }
+
+            GameEvent::PlayerCard(cards) => {
+                self.is_sharing_card =
+                    self.get_placement(self.player_turns[self.current_index_share]);
+                self.self_cards = cards;
+            }
+            GameEvent::DrawnCard(card) => {
+                let card_option = self.pop_from_stock_pile();
+                if let Some(mut card_element) = card_option {
+                    card_element.set_card(Some(&card));
+                    self.draw_for_hand(card_element);
+                }
+
+                println!("{}", self.stock_pile.len());
+            }
         }
-    }
-
-    fn get_opp_1_hand_next_pos(&self) -> Vec3 {
-        if self.opp_1_hand.is_empty() {
-            return vec3(0.0, 0.8 / 2., -2.5);
-        }
-        let pos = &self.opp_1_hand[self.opp_1_hand.len() - 1].target_pos;
-
-        let mut cloned = pos.clone();
-        cloned.x += 0.016;
-
-        cloned
-    }
-
-    fn get_hand_next_pos(&self) -> Vec3 {
-        if self.hand.is_empty() {
-            return vec3(-1.5, 2., 0.0);
-        }
-        let pos = &self.hand[self.hand.len() - 1].target_pos;
-
-        let mut cloned = pos.clone();
-        cloned.z += 0.016;
-
-        cloned
-    }
-
-    fn on_start(&mut self) {
-        self.rearrange_opp_1_hand();
     }
 }
 
@@ -385,7 +824,17 @@ impl Page for InGame {
 
         draw_grid(20, 1., BLACK, GRAY);
 
+        self.turn_arrow.draw();
+
         for i in &self.opp_1_hand {
+            i.draw();
+        }
+
+        for i in &self.opp_2_hand {
+            i.draw();
+        }
+
+        for i in &self.opp_3_hand {
             i.draw();
         }
 
@@ -402,61 +851,94 @@ impl Page for InGame {
         }
 
         for i in &self.melded_cards {
-            for card in i {
-                card.draw();
-            }
+            i.draw();
         }
+
+        for i in &self.opp_1_melded_cards {
+            i.draw();
+        }
+
+        for i in &self.opp_2_melded_cards {
+            i.draw();
+        }
+
+        for i in &self.opp_3_melded_cards {
+            i.draw();
+        }
+
+        let (mx, my) = mouse_position();
 
         set_default_camera();
         draw_text("WELCOME TO 3D WORLD", 10.0, 20.0, 30.0, BLACK);
-        draw_text(
-            &format!(
-                "Cam X: {}, Y: {}, Z: {}",
-                self.cam_x, self.cam_y, self.cam_z
-            ),
-            10.0,
-            40.0,
-            30.0,
-            BLACK,
-        );
-        draw_text(
-            &format!(
-                "Cam Up X: {}, Y: {}, Z: {}",
-                self.cam_up_x, self.cam_up_y, self.cam_up_z
-            ),
-            10.0,
-            60.0,
-            30.0,
-            BLACK,
-        );
-        draw_text(
-            &format!(
-                "Cam Target X: {}, Y: {}, Z: {}",
-                self.cam_target_x, self.cam_target_y, self.cam_target_z
-            ),
-            10.0,
-            80.0,
-            30.0,
-            BLACK,
-        );
+        draw_text(format!("X: {}, Y: {}", mx, my), 10.0, 40.0, 30.0, BLACK);
+        if self.is_melding {
+            draw_text("Is Melding", 10.0, 60.0, 30.0, BLACK);
+        }
     }
 
     fn update(&mut self, state: &Option<State>) -> Option<State> {
-        if !self.is_started {
-            self.on_start();
-
-            println!("Hello");
-
-            self.is_started = true;
-        }
-
         for i in &mut self.objects {
-            if let Some(state) = i.update(None, None, None, None, state) {
+            if let Some(state) = i.update(ParentState::root(), state) {
                 return Some(state);
             }
         }
 
+        if let Some(a) = &self.is_sharing_card {
+            self.elapsed_time += get_frame_time();
+
+            if self.elapsed_time >= self.target_time {
+                match a {
+                    PlayerPlacement::Me => {
+                        if let Some(card) = self.self_cards.pop() {
+                            let mut card_element = self.pop_from_stock_pile().unwrap();
+                            card_element.set_card(Some(&card));
+                            self.draw_for_hand(card_element);
+                        }
+                    }
+                    PlayerPlacement::Right => {
+                        let card_element = self.pop_from_stock_pile().unwrap();
+                        self.draw_for_opp_2(card_element);
+                    }
+                    PlayerPlacement::Front => {
+                        let card_element = self.pop_from_stock_pile().unwrap();
+                        self.draw_for_opp_3(card_element);
+                    }
+                    PlayerPlacement::Left => {
+                        let card_element = self.pop_from_stock_pile().unwrap();
+                        self.draw_for_opp_1(card_element);
+                    }
+                }
+
+                self.current_index_share += 1;
+
+                self.is_sharing_card = self.get_placement(
+                    self.player_turns[(self.current_index_share) % self.player_turns.len()],
+                );
+
+                self.shared_cards += 1;
+
+                println!("{}", self.stock_pile.len());
+
+                if self.shared_cards >= self.player_turns.len() as u8 * 6 {
+                    self.is_sharing_card = None;
+                }
+
+                self.target_time += 0.3;
+            }
+        }
+
+        self.update_stock_pile_hover();
+        self.turn_arrow.update();
+
         for i in &mut self.opp_1_hand {
+            i.update();
+        }
+
+        for i in &mut self.opp_2_hand {
+            i.update();
+        }
+
+        for i in &mut self.opp_3_hand {
             i.update();
         }
 
@@ -473,33 +955,23 @@ impl Page for InGame {
         }
 
         for i in &mut self.melded_cards {
-            for card in i {
-                card.update();
-            }
+            i.update();
         }
 
-        if is_key_released(KeyCode::K) {
-            self.discard_from_opp_1_hand();
+        for i in &mut self.opp_1_melded_cards {
+            i.update();
         }
 
-        if is_key_released(KeyCode::L) {
-            self.draw_for_opp_1_hand();
+        for i in &mut self.opp_2_melded_cards {
+            i.update();
         }
 
-        if is_key_released(KeyCode::M) {
-            self.draw_for_hand();
+        for i in &mut self.opp_3_melded_cards {
+            i.update();
         }
 
         if is_key_released(KeyCode::O) {
             self.is_melding = !self.is_melding;
-        }
-
-        if is_key_released(KeyCode::G) {
-            self.rearrange_hand_side();
-        }
-
-        if is_key_released(KeyCode::H) {
-            self.rearrange_hand();
         }
 
         self.update_card_interaction();
@@ -508,41 +980,53 @@ impl Page for InGame {
 
         if self.is_melding {
             if is_key_released(KeyCode::P) {
-                self.meld();
+                let mut cards: Vec<Card> = Vec::new();
+                for i in &self.selected_cards_for_meld {
+                    let card = self.hand[*i].card;
+                    cards.push(card.unwrap());
+                }
+
+                self.is_melding = false;
+                return Some(State::InGameCommand(GameCommand::Meld { cards: cards }));
             }
+
             if is_mouse_button_released(MouseButton::Left) {
                 if let Some(index) = self.hovered_card_index {
-                    if self.chosen_cards_for_meld.contains(&index) {
-                        let card: &mut Card = &mut self.hand[index];
+                    if self.selected_cards_for_meld.contains(&index) {
+                        let card: &mut CardElement = &mut self.hand[index];
 
-                        card.target_pos.y = 0.4;
+                        card.set_target(vec3(card.position.x, 0.4, card.position.z), card.rotation);
                         let mut index_to_remove: usize = 0;
-                        for (i, val) in &mut self.chosen_cards_for_meld.iter().enumerate() {
+                        for (i, val) in &mut self.selected_cards_for_meld.iter().enumerate() {
                             if *val == index {
                                 index_to_remove = i;
                             }
                         }
-                        self.chosen_cards_for_meld.remove(index_to_remove);
+                        self.selected_cards_for_meld.remove(index_to_remove);
                     } else {
-                        let card: &mut Card = &mut self.hand[index];
+                        let card: &mut CardElement = &mut self.hand[index];
 
-                        card.target_pos.y = 0.7;
-                        self.chosen_cards_for_meld.push(index);
+                        card.set_target(vec3(card.position.x, 0.7, card.position.z), card.rotation);
+                        self.selected_cards_for_meld.push(index);
                     }
                 }
             }
         } else {
             if is_mouse_button_released(MouseButton::Left) {
                 if let Some(index) = self.hovered_card_index {
+                    //
+                    // Swap cards
+                    //
+                    //
                     if let Some(prev_card_index) = self.selected_card_index {
                         self.hand.swap(index, prev_card_index);
                         self.selected_card_index = None;
                         self.rearrange_hand();
                     } else {
                         self.rearrange_hand();
-                        let card: &mut Card = &mut self.hand[index];
+                        let card: &mut CardElement = &mut self.hand[index];
 
-                        card.target_pos.y = 0.7;
+                        card.set_target(vec3(card.position.x, 0.7, card.position.z), card.rotation);
                         self.selected_card_index = Some(index);
                     }
                 } else {
@@ -551,13 +1035,36 @@ impl Page for InGame {
                         && my >= screen_height() / 2. - 200.
                         && my <= screen_height() / 2. + 50.
                     {
+                        // Discard
+                        //
                         if let Some(index) = self.selected_card_index {
-                            self.discard_from_hand(index);
+                            // Here we will send turn command via WebSocket to discard
+                            // self.discard_from_hand() will be called after the response from server
+                            //
+                            // self.discard_from_hand(index);
+
+                            let selected_card = &self.hand[index];
+
                             self.selected_card_index = None;
+
+                            return Some(State::InGameCommand(GameCommand::Turn(
+                                TurnCommand::Discard(selected_card.card.unwrap().clone()),
+                            )));
+                        } else {
+                            // Try to draw from discard pile
+                            return Some(State::InGameCommand(GameCommand::Turn(
+                                TurnCommand::Draw(DrawSource::DiscardPile),
+                            )));
                         }
                     } else {
                         self.rearrange_hand();
                         self.selected_card_index = None;
+                    }
+
+                    if self.is_hover_stock_pile {
+                        return Some(State::InGameCommand(GameCommand::Turn(TurnCommand::Draw(
+                            DrawSource::StockPile,
+                        ))));
                     }
                 }
             }

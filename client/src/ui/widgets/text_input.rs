@@ -109,10 +109,13 @@ impl TextInput {
         &self.components.text.value
     }
 
-    pub fn set_on_change_event(mut self, value: Box<dyn Fn(String) -> Option<State> + Send + Sync>) -> Self {
+    pub fn set_on_change_event(
+        mut self,
+        value: Box<dyn Fn(String) -> Option<State> + Send + Sync>,
+    ) -> Self {
         self.state.on_change_event = Some(value);
         self
-    } 
+    }
 }
 
 impl Object for TextInput {
@@ -129,15 +132,8 @@ impl Object for TextInput {
         self.components.text.draw();
     }
 
-    fn update(
-        &mut self,
-        parent_x: Option<f32>,
-        parent_y: Option<f32>,
-        parent_w: Option<f32>,
-        parent_h: Option<f32>,
-        state: &Option<State>,
-    ) -> Option<State> {
-        self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
+    fn update(&mut self, parent_state: ParentState, state: &Option<State>) -> Option<State> {
+        self.update_parent_state(parent_state.clone());
         self.update_dimension();
         self.update_alignment();
 
@@ -180,33 +176,19 @@ impl Object for TextInput {
             }
         }
 
+        self.components.container.update(parent_state, state);
+
         self.components
-            .container
-            .update(parent_x, parent_y, parent_w, parent_h, state);
+            .background
+            .update(self.components.container.as_parent_state(), state);
 
-        self.components.background.update(
-            Some(self.components.container.position.x + self.components.container.parent.x),
-            Some(self.components.container.position.y + self.components.container.parent.y),
-            Some(self.components.container.dimension.width),
-            Some(self.components.container.dimension.height),
-            state,
-        );
+        self.components
+            .marginer
+            .update(self.components.container.as_parent_state(), state);
 
-        self.components.marginer.update(
-            Some(self.components.container.position.x + self.components.container.parent.x),
-            Some(self.components.container.position.y + self.components.container.parent.y),
-            Some(self.components.container.dimension.width),
-            Some(self.components.container.dimension.height),
-            state,
-        );
-
-        self.components.text.update(
-            Some(self.components.marginer.position.x + self.components.marginer.parent.x),
-            Some(self.components.marginer.position.y + self.components.marginer.parent.y),
-            Some(self.components.marginer.dimension.width),
-            Some(self.components.marginer.dimension.height),
-            state,
-        );
+        self.components
+            .text
+            .update(self.components.marginer.as_parent_state(), state);
 
         return None;
     }

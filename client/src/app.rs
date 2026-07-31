@@ -32,10 +32,12 @@ pub enum GameState {
     Uninitialized,
 }
 
+#[derive(Debug)]
 pub struct CardTextures {
     pub cards: HashMap<remyan_core::Card, Texture2D>,
     pub empty_texture: Texture2D,
     pub back_texture: Texture2D,
+    pub arrow_texture: Texture2D,
 }
 
 impl CardTextures {
@@ -107,11 +109,13 @@ impl CardTextures {
 
         let empty_texture = load_texture("assets/card/card-empty.png").await.unwrap();
         let back_texture = load_texture("assets/card/card-back.png").await.unwrap();
+        let arrow_texture = load_texture("assets/arrow-01.png").await.unwrap();
 
         CardTextures {
             cards,
             empty_texture,
             back_texture,
+            arrow_texture
         }
     }
 

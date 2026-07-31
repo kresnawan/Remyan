@@ -22,7 +22,7 @@ use crate::{
 };
 
 pub struct DialogueBoxState {
-    is_shown: bool,
+    pub is_shown: bool,
 }
 
 impl DialogueBoxState {
@@ -32,10 +32,10 @@ impl DialogueBoxState {
 }
 
 pub struct DialogueBoxComponents {
-    container: Container,
-    marginer: Container,
-    dim: Rectangle,
-    background: Rectangle,
+    pub container: Container,
+    pub marginer: Container,
+    pub dim: Rectangle,
+    pub background: Rectangle,
 }
 
 pub struct DialogueBox {
@@ -125,13 +125,10 @@ impl Object for DialogueBox {
 
     fn update(
         &mut self,
-        parent_x: Option<f32>,
-        parent_y: Option<f32>,
-        parent_w: Option<f32>,
-        parent_h: Option<f32>,
+        parent_state: ParentState,
         state: &Option<State>,
     ) -> Option<State> {
-        self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
+        self.update_parent_state(parent_state.clone());
         self.update_dimension();
         self.update_alignment();
 
@@ -153,27 +150,18 @@ impl Object for DialogueBox {
 
         self.components
             .container
-            .update(parent_x, parent_y, parent_w, parent_h, state);
+            .update(parent_state, state);
         self.components.dim.update(
-            Some(0.0),
-            Some(0.0),
-            Some(screen_width()),
-            Some(screen_height()),
+            ParentState::root(),
             state,
         );
         self.components.background.update(
-            Some(self.components.container.position.x + self.components.container.parent.x),
-            Some(self.components.container.position.y + self.components.container.parent.y),
-            Some(self.components.container.dimension.width),
-            Some(self.components.container.dimension.height),
+            self.components.container.as_parent_state(),
             state,
         );
 
         if let Some(value) = self.components.marginer.update(
-            Some(self.components.container.position.x + self.components.container.parent.x),
-            Some(self.components.container.position.y + self.components.container.parent.y),
-            Some(self.components.container.dimension.width),
-            Some(self.components.container.dimension.height),
+            self.components.container.as_parent_state(),
             state,
         ) {
             return Some(value);

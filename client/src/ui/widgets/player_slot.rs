@@ -142,13 +142,10 @@ impl Object for PlayerSlot {
 
     fn update(
         &mut self,
-        parent_x: Option<f32>,
-        parent_y: Option<f32>,
-        parent_w: Option<f32>,
-        parent_h: Option<f32>,
+        parent_state: ParentState,
         state: &Option<State>,
     ) -> Option<State> {
-        self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
+        self.update_parent_state(parent_state);
         self.update_dimension();
         self.update_alignment();
 
@@ -191,42 +188,27 @@ impl Object for PlayerSlot {
         }
 
         self.plus.update(
-            Some(self.position.x + self.parent.x),
-            Some(self.position.y + self.parent.y),
-            Some(self.dimension.width),
-            Some(self.dimension.height),
+            self.as_parent_state(),
             state,
         );
 
         self.player_name.update(
-            Some(self.position.x + self.parent.x),
-            Some(self.position.y + self.parent.y),
-            Some(self.dimension.width),
-            Some(self.dimension.height),
+            self.as_parent_state(),
             state,
         );
 
         self.host_text.update(
-            Some(self.position.x + self.parent.x),
-            Some(self.position.y + self.parent.y),
-            Some(self.dimension.width),
-            Some(self.dimension.height),
+            self.as_parent_state(),
             state,
         );
 
         self.rec_fill.update(
-            Some(self.position.x + self.parent.x),
-            Some(self.position.y + self.parent.y),
-            Some(self.dimension.width),
-            Some(self.dimension.height),
+            self.as_parent_state(),
             state,
         );
 
         self.rec_outline.update(
-            Some(self.position.x + self.parent.x),
-            Some(self.position.y + self.parent.y),
-            Some(self.dimension.width),
-            Some(self.dimension.height),
+            self.as_parent_state(),
             state,
         );
 

@@ -2,17 +2,17 @@ use std::any::Any;
 
 use macroquad::window::{screen_height, screen_width};
 
-use crate::{state::State, ui::config::{dimension::{DynamicDimension, ObjectDimension}, parent::ParentState, position::{DynamicPosition, ObjectPosition}}};
+use crate::{
+    state::State,
+    ui::config::{
+        dimension::{DynamicDimension, ObjectDimension},
+        parent::ParentState,
+        position::{DynamicPosition, ObjectPosition},
+    },
+};
 
 pub trait Object {
-    fn update(
-        &mut self,
-        parent_x: Option<f32>,
-        parent_y: Option<f32>,
-        parent_w: Option<f32>,
-        parent_h: Option<f32>,
-        state: &Option<State>
-    ) -> Option<State>;
+    fn update(&mut self, parent_state: ParentState, state: &Option<State>) -> Option<State>;
     fn draw(&self);
 
     fn as_any(&self) -> &dyn Any;
@@ -43,7 +43,12 @@ pub trait Object {
                     current_dimension.width = (value / 100.0) * parent_state.width;
                 }
                 DynamicDimension::Custom(value) => {
-                    let res = value(parent_state.x, parent_state.y, parent_state.width, parent_state.height);
+                    let res = value(
+                        parent_state.x,
+                        parent_state.y,
+                        parent_state.width,
+                        parent_state.height,
+                    );
                     current_dimension.width = res;
                 }
                 DynamicDimension::Grid => {}
@@ -59,7 +64,12 @@ pub trait Object {
                     current_dimension.height = (value / 100.0) * parent_state.height;
                 }
                 DynamicDimension::Custom(value) => {
-                    let res = value(parent_state.x, parent_state.y, parent_state.width, parent_state.height);
+                    let res = value(
+                        parent_state.x,
+                        parent_state.y,
+                        parent_state.width,
+                        parent_state.height,
+                    );
                     current_dimension.height = res;
                 }
                 DynamicDimension::Grid => {}
@@ -83,40 +93,8 @@ pub trait Object {
         return self;
     }
 
-    fn update_parent_state(
-        &mut self,
-        parent_x: Option<f32>,
-        parent_y: Option<f32>,
-        parent_w: Option<f32>,
-        parent_h: Option<f32>,
-    ) {
-        let mut parent_state_temp = self.get_parent_state();
-
-        if let Some(value) = parent_x {
-            parent_state_temp.x = value;
-        } else {
-            parent_state_temp.x = 0.0;
-        }
-
-        if let Some(value) = parent_y {
-            parent_state_temp.y = value;
-        } else {
-            parent_state_temp.y = 0.0;
-        }
-
-        if let Some(value) = parent_w {
-            parent_state_temp.width = value;
-        } else {
-            parent_state_temp.width = screen_width();
-        }
-
-        if let Some(value) = parent_h {
-            parent_state_temp.height = value;
-        } else {
-            parent_state_temp.height = screen_height();
-        }
-
-        self.set_parent_state_ref(parent_state_temp);
+    fn update_parent_state(&mut self, parent_state: ParentState) {
+        self.set_parent_state_ref(parent_state);
     }
 
     fn update_alignment(&mut self) {
@@ -136,7 +114,12 @@ pub trait Object {
                     position_temp.x = parent_state_temp.width - dimension_temp.width;
                 }
                 DynamicPosition::Custom(value) => {
-                    position_temp.x = value(parent_state_temp.x, parent_state_temp.y, parent_state_temp.width, parent_state_temp.height);
+                    position_temp.x = value(
+                        parent_state_temp.x,
+                        parent_state_temp.y,
+                        parent_state_temp.width,
+                        parent_state_temp.height,
+                    );
                 }
                 DynamicPosition::Flex => {}
                 DynamicPosition::Grid => {}
@@ -155,7 +138,12 @@ pub trait Object {
                     position_temp.y = parent_state_temp.height - dimension_temp.height;
                 }
                 DynamicPosition::Custom(value) => {
-                    position_temp.y = value(parent_state_temp.x, parent_state_temp.y, parent_state_temp.width, parent_state_temp.height);
+                    position_temp.y = value(
+                        parent_state_temp.x,
+                        parent_state_temp.y,
+                        parent_state_temp.width,
+                        parent_state_temp.height,
+                    );
                 }
                 DynamicPosition::Flex => {}
                 DynamicPosition::Grid => {}
@@ -163,5 +151,23 @@ pub trait Object {
         }
 
         self.set_position_ref(position_temp);
+    }
+
+    fn as_parent_state(&self) -> ParentState {
+        let dim = self.get_dimension();
+        ParentState {
+            x: self.get_total_x(),
+            y: self.get_total_y(),
+            height: dim.height,
+            width: dim.width,
+        }
+    }
+
+    fn get_total_x(&self) -> f32 {
+        self.get_position().x + self.get_parent_state().x
+    }
+
+    fn get_total_y(&self) -> f32 {
+        self.get_position().y + self.get_parent_state().y
     }
 }

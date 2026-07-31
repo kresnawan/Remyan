@@ -105,13 +105,10 @@ impl Object for SwitchButton {
 
     fn update(
         &mut self,
-        parent_x: Option<f32>,
-        parent_y: Option<f32>,
-        parent_w: Option<f32>,
-        parent_h: Option<f32>,
+        parent_state: ParentState,
         state: &Option<crate::state::State>,
     ) -> Option<crate::state::State> {
-        self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
+        self.update_parent_state(parent_state.clone());
         self.update_dimension();
         self.update_alignment();
 
@@ -178,10 +175,7 @@ impl Object for SwitchButton {
         }
 
         self.components.switch.update(
-            Some(self.components.background.position.x + self.components.background.parent.x),
-            Some(self.components.background.position.y + self.components.background.parent.y),
-            Some(self.components.background.dimension.width),
-            Some(self.components.background.dimension.height),
+            self.components.background.as_parent_state(),
             state,
         );
 
@@ -208,9 +202,8 @@ impl Object for SwitchButton {
                         RoomConfigSwitchId::FreeHit(_) => {
                             self.state.is_on = new_config.free_hit;
                         }
-                        RoomConfigSwitchId::WithJoker(_) => {
-                            self.state.is_on = new_config.with_joker;
-                        }
+                        
+                        _ => {}
                     },
                 }
 

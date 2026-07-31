@@ -86,24 +86,19 @@ impl Object for RegularButton {
     }
     fn update(
         &mut self,
-        parent_x: Option<f32>,
-        parent_y: Option<f32>,
-        parent_w: Option<f32>,
-        parent_h: Option<f32>,
+        parent_state: ParentState,
         state: &Option<State>,
     ) -> Option<State> {
-        self.update_parent_state(parent_x, parent_y, parent_w, parent_h);
+        self.update_parent_state(parent_state.clone());
         self.update_dimension();
         self.update_alignment();
 
         self.components
             .background
-            .update(parent_x, parent_y, parent_w, parent_h, state);
+            .update(parent_state.clone(), state);
         self.components
             .shadow
-            .update(parent_x, parent_y, parent_w, parent_h, state);
-
-        
+            .update(parent_state.clone(), state);
 
         self.components.shadow.position.x =
             self.components.background.position.x + self.shadow_offset;
@@ -116,10 +111,7 @@ impl Object for RegularButton {
         }
 
         self.components.text.update(
-            Some(self.components.background.position.x + self.components.background.parent.x),
-            Some(self.components.background.position.y + self.components.background.parent.y),
-            Some(self.components.background.dimension.width),
-            Some(self.components.background.dimension.height),
+            self.components.background.as_parent_state(),
             state,
         );
 
@@ -147,7 +139,7 @@ impl Object for RegularButton {
                             }
 
                             ButtonId::StartGame => {
-                                if *playable {
+                                if *playable && *is_host {
                                     self.is_disabled = false;
                                 } else {
                                     self.is_disabled = true;
@@ -196,9 +188,13 @@ impl Object for RegularButton {
         }
 
         if self.is_disabled {
-            self.components.background.config.color.set_opacity_ref(0.5);
+            self.components.background.config.color.set_opacity_ref(0.3);
+            self.components.text.config.color.a = 0.3;
+            self.components.background.position.x = self.components.shadow.position.x;
+            self.components.background.position.y = self.components.shadow.position.y;
         } else {
             self.components.background.config.color.set_opacity_ref(1.0);
+            self.components.text.config.color.a = 1.;
         }
 
         if let Some(event) = &mut self.state.on_click_event {
@@ -309,7 +305,7 @@ impl Button for RegularButton {
             dialogue_id: None,
             is_active: true,
             is_shown: true,
-            is_disabled: false
+            is_disabled: false,
         }
     }
 

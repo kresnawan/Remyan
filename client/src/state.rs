@@ -1,10 +1,11 @@
-use remyan_core::RoomConfig;
+use remyan_core::{RoomConfig, protocol::command::GameCommand};
 
 use crate::ui::widgets::switch_button::RoomConfigSwitchId;
 
 #[derive(Clone, Debug)]
 pub enum State {
     OpenDialogueBox(u8),
+    OpenRoomConfigDialogueBox,
     CloseDialogueBox(u8),
     InputRoomId(String),
     CreateRoom,
@@ -20,6 +21,7 @@ pub enum State {
     ApplyConfig,
     Reset,
     StartGame,
+    InGameCommand(GameCommand)
 }
 
 #[derive(Clone, Debug)]

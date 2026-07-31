@@ -7,3 +7,4 @@ pub mod rectangle;
 pub mod player_slot;
 mod plus;
 pub mod switch_button;
+pub mod room_config_dialogue_box;

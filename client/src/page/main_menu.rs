@@ -218,7 +218,7 @@ impl MainMenu {
 impl Page for MainMenu {
     fn update(&mut self, state: &Option<State>) -> Option<State> {
         for item in &mut self.objects {
-            if let Some(n) = item.update(None, None, None, None, state) {
+            if let Some(n) = item.update(ParentState::root(), state) {
                 match n {
                     State::InputRoomId(value) => {
                         self.room_id_input = value;

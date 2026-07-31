@@ -1,66 +1,81 @@
+use crate::{app::CardTextures, ui::three_dimensional::ray::Ray};
+use macroquad::prelude::*;
+use remyan_core::Card;
 use std::sync::Arc;
 
-use macroquad::prelude::*;
-
-use crate::{app::CardTextures, ui::three_dimensional::ray::Ray};
-
-#[derive(Clone)]
-pub struct Card {
+#[derive(Clone, Debug)]
+pub struct CardElement {
     pub position: Vec3,
     pub rotation: Vec3,
     pub dimension: Vec2,
+
     pub target_pos: Vec3,
     pub target_rot: Vec3,
     pub target_dim: Vec2,
+
+    pub start_pos: Vec3,
+    pub start_rot: Vec3,
+    pub start_dim: Vec2,
+    pub animation_time: f32,
+    pub animation_duration: f32,
+
     pub is_animating: bool,
     z_offset: f32,
     front_local_vertices: [(Vec3, Vec2); 4],
     back_local_vertices: [(Vec3, Vec2); 4],
-    front_texture: Texture2D,
-    back_texture: Texture2D,
+    pub front_texture: Texture2D,
+    pub back_texture: Texture2D,
+    card_textures: Arc<CardTextures>,
+    pub card: Option<Card>
 }
 
-impl Card {
-    pub fn draw_debug(&self) {
-        draw_text(
-            &format!(
-                "Current card pos X: {}, Y: {}, Z: {}",
-                self.position.x, self.position.y, self.position.z
-            ),
-            10.0,
-            100.0,
-            30.0,
-            BLACK,
-        );
-        draw_text(
-            &format!(
-                "Current card rot X: {}, Y: {}, Z: {}",
-                self.rotation.x, self.rotation.y, self.rotation.z
-            ),
-            10.0,
-            120.0,
-            30.0,
-            BLACK,
-        );
-    }
+fn ease_out_cubic(t: f32) -> f32 {
+    let p = 1.0 - t;
+    1.0 - p * p * p
+}
 
+fn ease_in_cubic(t: f32) -> f32 {
+    t * t
+}
+
+impl CardElement {
     pub fn set_position_ref(&mut self, pos: Vec3) {
         self.position = pos;
     }
 
+    pub fn set_card(&mut self, card: Option<&Card>) {
+        if let Some(card) = card {
+            self.card = Some(card.clone());
+            self.front_texture = self.card_textures.get(card);
+        } else {
+            self.card = None;
+            self.front_texture = self.card_textures.get_empty_texture();
+        }
+    }
+
     pub fn set_target(&mut self, pos: Vec3, rot: Vec3) {
+        self.start_pos = self.position;
+        self.start_rot = self.rotation;
+        self.start_dim = self.dimension;
+
         self.target_pos = pos;
         self.target_rot = rot;
 
+        self.animation_time = 0.;
         self.is_animating = true;
     }
 
     pub fn set_target_with_dim(&mut self, pos: Vec3, rot: Vec3, height: f32) {
+        self.start_pos = self.position;
+        self.start_rot = self.rotation;
+        self.start_dim = self.dimension;
+
         self.target_pos = pos;
         self.target_rot = rot;
         self.target_dim.x = 2.5 / 3.5 * (height / 2.);
         self.target_dim.y = height / 2.;
 
+        self.animation_time = 0.;
         self.is_animating = true;
     }
 
@@ -72,10 +87,13 @@ impl Card {
         card_textures: Arc<CardTextures>,
     ) -> Self {
         let front_texture: Texture2D;
+        let cloned_card: Option<Card>;
         if let Some(card) = card {
             front_texture = card_textures.get(card);
+            cloned_card = Some(card.clone())
         } else {
             front_texture = card_textures.get_empty_texture();
+            cloned_card = None;
         }
         let back_texture = card_textures.get_back_texture();
 
@@ -104,20 +122,52 @@ impl Card {
         Self {
             position,
             rotation,
+            dimension: vec2(w, h),
+
             target_pos: position,
             target_rot: rotation,
+            target_dim: vec2(w, h),
+
+            start_pos: position,
+            start_rot: rotation,
+            start_dim: vec2(w, h),
+
+            animation_time: 0.,
+            animation_duration: 0.5,
+
             front_local_vertices,
             back_local_vertices,
             front_texture: front_texture,
             back_texture: back_texture.clone(),
-            dimension: vec2(w, h),
-            target_dim: vec2(w, h),
+
             z_offset: z_offset,
-            is_animating: false,
+            is_animating: true,
+            card_textures,
+            card: cloned_card,
         }
     }
 
     pub fn update(&mut self) {
+        if self.is_animating {
+            let dt = get_frame_time();
+            self.animation_time += dt;
+
+            let progress = (self.animation_time / self.animation_duration).clamp(0., 1.);
+            let eased_t = ease_out_cubic(progress);
+
+            self.position = self.start_pos.lerp(self.target_pos, eased_t);
+            self.rotation = self.start_rot.lerp(self.target_rot, eased_t);
+            self.dimension = self.start_dim.lerp(self.target_dim, eased_t);
+
+            if self.position.distance(self.target_pos) < 0.0001 {
+                self.position = self.target_pos;
+                self.rotation = self.target_rot;
+                self.dimension = self.target_dim;
+
+                self.is_animating = false;
+            }
+        }
+
         self.front_local_vertices = [
             (
                 vec3(-self.dimension.x, -self.dimension.y, self.z_offset),
@@ -155,19 +205,6 @@ impl Card {
                 vec2(0.0, 0.0),
             ),
         ];
-
-        let dt = get_frame_time();
-        let speed = 10.0;
-        self.position = self.position.lerp(self.target_pos, speed * dt);
-        self.rotation = self.rotation.lerp(self.target_rot, speed * dt);
-        self.dimension = self.dimension.lerp(self.target_dim, speed * dt);
-
-        if self.position.distance(self.target_pos) < 0.0001 {
-            self.position = self.target_pos;
-            self.rotation = self.target_rot;
-
-            self.is_animating = false;
-        }
     }
 
     pub fn draw(&self) {
@@ -203,7 +240,7 @@ impl Card {
     pub fn get_indexed_position(
         base_position: Vec3,
         rotation_angles: Vec3,
-        index: usize,
+        index: f32,
         spacing_x: f32,
         spacing_z: f32,
     ) -> Vec3 {
@@ -211,7 +248,7 @@ impl Card {
             * Mat4::from_rotation_x(rotation_angles.x.to_radians())
             * Mat4::from_rotation_z(rotation_angles.z.to_radians());
 
-        let local_offset = vec3(index as f32 * spacing_x, 0.0, index as f32 * spacing_z);
+        let local_offset = vec3(index as f32 * spacing_x, 0.0, index * spacing_z);
 
         let rotated_offset = rotation.transform_vector3(local_offset);
         base_position + rotated_offset
