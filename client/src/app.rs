@@ -9,7 +9,7 @@ use quad_net::{
     http_request::{Method, Request, RequestBuilder},
     web_socket::WebSocket,
 };
-use remyan_core::{CardIcon, CardType, CourtType, Deck, JokerType, SpotNumber};
+use remyan_core::{CardIcon, CardType, CourtType, Deck, JokerType, RoomConfig, SpotNumber};
 
 use crate::{
     page::{Page, main_menu::MainMenu, room::Room},
@@ -309,11 +309,13 @@ impl App {
         {
             match state {
                 State::CreateRoom => {
+                    let room_config = RoomConfig::default();
+                    let room_config_str = serde_json::to_string(&room_config).unwrap();
                     let req = RequestBuilder::new("http://localhost:6767/room/create")
                         .method(Method::Post)
-                        .header("Cookie", &format!("id={}", self.player_id.unwrap()))
+                        // .header("Cookie", &format!("id={}", self.player_id.unwrap()))
                         .header("Content-Type", "application/json")
-                        .body(r#"{"allow_court_stacking": true,"free_hit": true,"allow_railing": true,"with_joker": true,"hitter_scoring": true,"number_of_jokers": "None","joker_type": null,"allow_closing": false}"#)
+                        .body(&room_config_str)
                         .send();
                     self.create_room_request = Some(req);
                     self.game_state = GameState::Loading(Loading::CreateRoom);

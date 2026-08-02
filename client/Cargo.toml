@@ -4,11 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-macroquad = "0.4.15"
-remyan-core = { path = "../core" }
+macroquad = "0.4.16"
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-strum = "0.28"
-strum_macros = "0.28"
-getrandom = "0.4.3"
-quad-net = "0.1.2"
+strum = { workspace = true }
+strum_macros = { workspace = true }
+remyan-core = { path = "../core", default-features = false }
+quad-net = { path = "crates/quad-net" }

@@ -1,31 +1,10 @@
+use std::panic;
+
+#[cfg(target_arch = "wasm32")]
+use client::console_log;
+
 use client::app::App;
 use macroquad::prelude::*;
-
-// a custom getrandom crate backend
-// because we're not using wasm-bindgen to make the WASM binding
-// so that we need a custom getrandom backend to get the game compiled
-//
-//
-#[cfg(target_arch = "wasm32")]
-fn get_random(buf: &mut [u8]) -> Result<(), getrandom::Error> {
-    for byte in buf.iter_mut() {
-        *byte = (macroquad::rand::rand() % 256) as u8;
-    }
-    Ok(())
-}
-
-#[cfg(target_arch = "wasm32")]
-#[unsafe(no_mangle)]
-unsafe extern "Rust" fn __getrandom_v03_custom(
-    dest: *mut u8,
-    len: usize,
-) -> Result<(), getrandom::Error> {
-    let buf = unsafe {
-        core::ptr::write_bytes(dest, 0, len);
-        core::slice::from_raw_parts_mut(dest, len)
-    };
-    get_random(buf)
-}
 
 fn window_config() -> Conf {
     Conf {
@@ -40,6 +19,30 @@ fn window_config() -> Conf {
 
 #[macroquad::main(window_config)]
 async fn main() {
+    #[cfg(target_arch = "wasm32")]
+    console_log("Hello from Rust!");
+
+    #[cfg(target_arch = "wasm32")]
+    panic::set_hook(Box::new(|panic_info| {
+        console_log("🚨 Custom Panic Listener Triggered!");
+
+        if let Some(location) = panic_info.location() {
+            console_log(&format!(
+                "Panic occurred in file '{}' at line {}",
+                location.file(),
+                location.line()
+            ));
+        }
+
+        if let Some(message) = panic_info.payload().downcast_ref::<&str>() {
+            console_log(&format!("Panic message: {}", message));
+        } else if let Some(message) = panic_info.payload().downcast_ref::<String>() {
+            console_log(&format!("Panic message: {}", message));
+        } else {
+            console_log(&format!("Panic message is unknown."));
+        }
+    }));
+
     let mut app = App::new();
     app.init().await;
 }

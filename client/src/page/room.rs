@@ -1,5 +1,8 @@
 use std::sync::Arc;
 
+#[cfg(target_arch = "wasm32")]
+use crate::console_log;
+
 use macroquad::{
     color::{BLACK, BLANK, Color, WHITE},
     window::{screen_height, screen_width},
@@ -70,6 +73,8 @@ impl Room {
         player_id: u32,
         card_textures: Arc<CardTextures>,
     ) -> Self {
+        #[cfg(target_arch = "wasm32")]
+        console_log("Room initialized");
         Self {
             objects: Vec::new(),
             room_config: RoomConfig::default(),
@@ -174,10 +179,13 @@ impl Page for Room {
         let Some(ws) = &mut self.ws else {
             return None;
         };
+
         let Some(value) = ws.try_recv() else {
             return None;
         };
+
         let deserialized = serde_json::from_str::<EventToken>(str::from_utf8(&value).unwrap());
+
 
         let Ok(token) = deserialized else {
             return None;

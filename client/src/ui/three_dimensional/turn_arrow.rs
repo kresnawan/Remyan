@@ -1,6 +1,5 @@
-use crate::{app::CardTextures, ui::config::position};
+use crate::app::CardTextures;
 use macroquad::prelude::*;
-use remyan_core::Card;
 use std::sync::Arc;
 
 #[derive(Clone, Debug)]

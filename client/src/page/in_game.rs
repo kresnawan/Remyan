@@ -110,15 +110,13 @@ impl InGame {
     }
 
     fn init_stock_pile(card_textures: Arc<CardTextures>) -> Vec<CardElement> {
-        let mut deck = Deck::new(true);
-        deck.shuffle();
         let mut result: Vec<CardElement> = Vec::new();
-        for i in deck.cards {
+        for _ in 0..54 {
             let mut new_card = CardElement::new(
                 STOCK_PILE_POS,
                 STOCK_PILE_ROT,
                 0.8,
-                Some(&i),
+                None,
                 card_textures.clone(),
             );
 
