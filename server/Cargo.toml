@@ -12,3 +12,4 @@ tokio = { workspace = true, features = ["full"] }
 futures-util = { workspace = true, default-features = false, features = ["sink"] }
 remyan-core = { path = "../core" }
 rand = { workspace = true }
+tower-http = { version = "0.7.0", features=["cors"] }

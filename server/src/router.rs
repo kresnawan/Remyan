@@ -1,9 +1,10 @@
 use std::{collections::HashMap, sync::Arc};
 
-use axum::{Extension, Router, routing::get};
+use axum::{Extension, Router, http::{self, HeaderValue, Method, header::{CONTENT_TYPE, COOKIE}}, routing::get};
 use remyan_core::AppInstance;
 use serde::Deserialize;
 use tokio::sync::Mutex;
+use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
     route::{auth, room, ws},
@@ -37,13 +38,20 @@ impl Server {
         }
     }
     pub async fn init(server: Arc<Mutex<Server>>, core_app: AppInstance) {
+        let cors = CorsLayer::new()
+            .allow_methods([Method::GET, Method::POST, Method::DELETE, Method::PUT, Method::OPTIONS])
+            .allow_origin("http://localhost".parse::<HeaderValue>().unwrap())
+            .allow_credentials(true)
+            .allow_headers([COOKIE, CONTENT_TYPE]);
+
         let app: Router = Router::new()
             .route("/ping", get(|| async { "Pong" }))
             .merge(room())
             .merge(auth())
             .merge(ws())
             .layer(Extension(core_app))
-            .layer(Extension(server));
+            .layer(Extension(server))
+            .layer(cors);
 
         let listener = tokio::net::TcpListener::bind("127.0.0.1:6767")
             .await
