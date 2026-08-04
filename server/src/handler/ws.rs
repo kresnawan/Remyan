@@ -6,10 +6,10 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use remyan_core::AppInstance;
 use tokio::sync::Mutex;
 
 use crate::{
+    AppInstance,
     router::{RoomIdAndPlayerIdQuery, Server},
     ws::socket_handler::handle_socket,
 };

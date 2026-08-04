@@ -7,11 +7,12 @@ use crate::Tx;
 pub struct ServerRoom {
     pub room_id: [u8; 6],
     pub txs: HashMap<u32, Option<Tx>>,
+    pub counter: u32,
 }
 
 impl ServerRoom {
     pub fn new(room_id: [u8; 6]) -> Self {
-        ServerRoom { room_id, txs: HashMap::new() }
+        ServerRoom { room_id, txs: HashMap::new(), counter: 0 }
     }
     pub async fn broadcast(&mut self, all: bool, sender: u32, token: EventToken) {
         let serialized = serde_json::to_string(&token).unwrap();

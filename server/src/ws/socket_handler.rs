@@ -1,16 +1,11 @@
-use std::sync::Arc;
-
-use axum::{
-    extract::ws::{Message, WebSocket},
-};
+use axum::extract::ws::{Message, WebSocket};
 use futures_util::{SinkExt, StreamExt};
-use remyan_core::{
-    AppInstance, protocol::event::{EventToken, RoomEvent},
-};
+use remyan_core::protocol::event::{EventToken, RoomEvent};
+use std::sync::Arc;
 use tokio::sync::mpsc;
 
 use crate::{
-    ServerInstance,
+    AppInstance, ServerInstance,
     ws::command_handler::{handle_game_command, handle_room_command},
 };
 
@@ -42,7 +37,7 @@ pub async fn handle_socket(
             player_id,
             EventToken::RoomEvent(RoomEvent::RoomPlayer {
                 players: app_room.player_turns.clone(),
-                host_id: app_room.host_id
+                host_id: app_room.host_id,
             }),
         )
         .await;

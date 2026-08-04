@@ -7,9 +7,8 @@ use axum_extra::extract::{
     cookie::{Cookie, SameSite},
 };
 use rand::RngExt;
-use remyan_core::AppInstance;
 
-use crate::handler::auth::handle_login;
+use crate::{AppInstance, handler::auth::handle_login};
 
 pub fn auth() -> Router {
     let router = Router::new().route("/login", post(handle_login)).route(
