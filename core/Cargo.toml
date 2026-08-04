@@ -10,12 +10,6 @@ strum = { workspace = true }
 strum_macros = { workspace = true }
 rand = { workspace = true, optional = true }
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { workspace = true, features = ["full"] }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-tokio = { workspace = true, features = ["sync", "macros"] }
-
 [features]
-default = ["pake-rand"]
-pake-rand = ["dep:rand"]
+default = ["server"]
+server = ["dep:rand"]
