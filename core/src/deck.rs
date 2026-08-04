@@ -1,4 +1,4 @@
-#[cfg(feature = "pake-rand")]
+#[cfg(feature = "server")]
 use rand::seq::SliceRandom;
 
 use strum::IntoEnumIterator;
@@ -74,7 +74,7 @@ impl Deck {
         return Self { cards: deck };
     }
 
-    #[cfg(feature = "pake-rand")]
+    #[cfg(feature = "server")]
     pub fn shuffle(&mut self) {
         let mut rng = rand::rng();
         self.cards.shuffle(&mut rng);

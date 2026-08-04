@@ -14,8 +14,3 @@ pub use deck::*;
 pub use player::*;
 pub use player_turn::PlayerTurn;
 pub use room::*;
-
-use std::sync::Arc;
-use tokio::sync::Mutex;
-
-pub type AppInstance = Arc<Mutex<App>>;

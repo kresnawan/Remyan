@@ -9,7 +9,7 @@ pub enum DrawSource {
     DiscardPile,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub enum Error {
     NotAHost,
     PlayerNotEnough,
@@ -21,5 +21,9 @@ pub enum Error {
     InvalidCommand,
     RequireMeld,
     NotATurn,
-    DiscardAJoker
+    DiscardAJoker,
+    AlreadyJoined,
+    RoomNotFound,
+    TooManyPlayers,
+    DrawnCardRequired
 }

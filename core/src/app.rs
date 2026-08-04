@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+#[cfg(feature = "server")]
+use crate::protocol::Error;
 use crate::{Player, PlayerStatus, Room, RoomConfig, RoomManager};
 
 pub struct App {
@@ -42,7 +44,8 @@ impl App {
         }
     }
 
-    pub fn put_player_to_room(&mut self, player_id: u32, room_id: [u8; 6]) -> Result<(), String> {
+    #[cfg(feature = "server")]
+    pub fn join_room(&mut self, player_id: u32, room_id: [u8; 6]) -> Result<(), Error> {
         // match self.get_player_status(player_id) {
         //     Some(n) => match n {
         //         PlayerStatus::Offline => {
@@ -53,7 +56,7 @@ impl App {
         //     None => return Err(format!("Player dengan id {} tidak terdaftar", player_id)),
         // }
 
-        if let Err(e) = self.room_manager.put_player_in_room(player_id, room_id) {
+        if let Err(e) = self.room_manager.join_room(player_id, room_id) {
             return Err(e);
         }
 
@@ -77,8 +80,8 @@ impl App {
         Ok(())
     }
 
-    #[cfg(feature = "pake-rand")]
-    pub fn create_room(&mut self, host_id: u32, cfg: RoomConfig) -> Result<[u8; 6], String> {
+    #[cfg(feature = "server")]
+    pub fn create_room(&mut self, host_id: u32, cfg: RoomConfig) -> Result<[u8; 6], Error> {
         // match self.get_player_status(host_id) {
         //     Some(n) => match n {
         //         PlayerStatus::Offline => {

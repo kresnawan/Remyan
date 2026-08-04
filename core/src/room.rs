@@ -10,7 +10,7 @@ pub use manager::*;
 pub use player::*;
 
 use crate::{
-    Card, CardGame, CardType, CourtType, Deck, PlayerTurn, SpotNumber,
+    Card, CardGame, CardIcon, CardType, CourtType, Deck, PlayerTurn, SpotNumber,
     protocol::{DrawSource, Error},
 };
 
@@ -30,14 +30,14 @@ pub struct Room {
 }
 
 impl Room {
-    pub fn new(cfg: RoomConfig, host_id: u32) -> Result<Self, String> {
+    pub fn new(cfg: RoomConfig, host_id: u32) -> Self {
         let new_session_player = RoomPlayer::new();
         let deck = Deck::new(true);
 
         let mut players = HashMap::new();
         players.insert(host_id, new_session_player);
 
-        return Ok(Self {
+        Self {
             deck: deck,
             stock_pile: Vec::new(),
             discard_pile: Vec::new(),
@@ -49,10 +49,10 @@ impl Room {
             host_id: host_id,
             currently_playing: false,
             current_turn: PlayerTurn::new(),
-        });
+        }
     }
 
-    #[cfg(feature = "pake-rand")]
+    #[cfg(feature = "server")]
     fn share_cards(&mut self) {
         self.deck.shuffle();
         // Share cards
@@ -69,7 +69,7 @@ impl Room {
         }
     }
 
-    #[cfg(feature = "pake-rand")]
+    #[cfg(feature = "server")]
     pub fn start_game(&mut self, game_id: u32, player_id: u32) -> Result<(), Error> {
         if self.host_id != player_id {
             return Err(Error::NotAHost);
@@ -96,11 +96,9 @@ impl Room {
         return Ok(());
     }
 
-    pub fn insert_player(&mut self, player_id: u32) -> Result<(), String> {
+    pub fn insert_player(&mut self, player_id: u32) -> Result<(), Error> {
         if self.players.len() >= 4 {
-            return Err(String::from(
-                "Dalam satu session hanya memuat maksimal 4 player",
-            ));
+            return Err(Error::TooManyPlayers);
         }
         let new_session_player = RoomPlayer::new();
         self.players.insert(player_id, new_session_player);
@@ -152,7 +150,30 @@ impl Room {
         card: &Card,
         player_card_hashset: &HashSet<&Card>,
         was_melding: bool,
+        allow_railing: bool,
     ) -> bool {
+        if allow_railing {
+            let mut current_icon_number = card.card_icon.unwrap().as_number();
+            let mut is_eligible = true;
+            for i in 1..=3 {
+                let target = (current_icon_number + i) % 4;
+                let equal_card = player_card_hashset
+                    .contains(&Card::new(CardIcon::from_number(target), card.card_type));
+
+                if equal_card {
+                    current_icon_number += 1;
+                    continue;
+                } else {
+                    is_eligible = false;
+                    break;
+                }
+            }
+
+            if is_eligible {
+                return true;
+            }
+        }
+
         match card.card_type {
             CardType::Spot(_) => {
                 let spot_number_iter: Vec<SpotNumber> = SpotNumber::iter().collect();
@@ -166,41 +187,59 @@ impl Room {
                 let mut three_greater = false;
 
                 if spot_index >= 3 {
-                    three_smaller = player_card_hashset.contains(&Card {
+                    let sample_card = Card {
                         card_icon: card.card_icon,
                         card_type: CardType::Spot(*spot_number_iter.get(spot_index - 3).unwrap()),
-                    });
+                    };
+                    three_smaller = player_card_hashset.contains(&sample_card)
+                        || player_card_hashset
+                            .contains(&Card::joker(sample_card.get_color_type().unwrap()));
                 }
 
                 if spot_index >= 2 {
-                    two_smaller = player_card_hashset.contains(&Card {
+                    let sample_card = Card {
                         card_icon: card.card_icon,
                         card_type: CardType::Spot(*spot_number_iter.get(spot_index - 2).unwrap()),
-                    });
+                    };
+                    two_smaller = player_card_hashset.contains(&sample_card)
+                        || player_card_hashset
+                            .contains(&Card::joker(sample_card.get_color_type().unwrap()));
                 }
                 if spot_index >= 1 {
-                    one_smaller = player_card_hashset.contains(&Card {
+                    let sample_card = Card {
                         card_icon: card.card_icon,
                         card_type: CardType::Spot(*spot_number_iter.get(spot_index - 1).unwrap()),
-                    });
+                    };
+                    one_smaller = player_card_hashset.contains(&sample_card)
+                        || player_card_hashset
+                            .contains(&Card::joker(sample_card.get_color_type().unwrap()));
                 }
                 if spot_index <= 7 {
-                    one_greater = player_card_hashset.contains(&Card {
+                    let sample_card = Card {
                         card_icon: card.card_icon,
                         card_type: CardType::Spot(*spot_number_iter.get(spot_index + 1).unwrap()),
-                    });
+                    };
+                    one_greater = player_card_hashset.contains(&sample_card)
+                        || player_card_hashset
+                            .contains(&Card::joker(sample_card.get_color_type().unwrap()));
                 }
                 if spot_index <= 6 {
-                    two_greater = player_card_hashset.contains(&Card {
+                    let sample_card = Card {
                         card_icon: card.card_icon,
                         card_type: CardType::Spot(*spot_number_iter.get(spot_index + 2).unwrap()),
-                    });
+                    };
+                    two_greater = player_card_hashset.contains(&sample_card)
+                        || player_card_hashset
+                            .contains(&Card::joker(sample_card.get_color_type().unwrap()));
                 }
                 if spot_index <= 5 {
-                    three_greater = player_card_hashset.contains(&Card {
+                    let sample_card = Card {
                         card_icon: card.card_icon,
                         card_type: CardType::Spot(*spot_number_iter.get(spot_index + 3).unwrap()),
-                    });
+                    };
+                    three_greater = player_card_hashset.contains(&sample_card)
+                        || player_card_hashset
+                            .contains(&Card::joker(sample_card.get_color_type().unwrap()));
                 }
 
                 if (two_smaller && one_smaller)
@@ -283,62 +322,79 @@ impl Room {
         self.config = new_config;
         return Ok(());
     }
+
+    fn is_turn(&self, player_id: u32) -> bool {
+        self.player_turns[self.current_turn.index] == player_id
+    }
 }
 
-/**
- *
- * The separate implementation below is for player's turn handler
- * Separated due to complexity
- *
- *
- *
- */
+//
+//
+// The separate implementation below is for player's turn handler
+// Separated due to complexity
+//
+//
+//
+//
 
 impl Room {
-    pub async fn handle_draw_from_discard_pile(&mut self, player_id: u32) -> Result<Card, Error> {
-        let max_draw = self.players.len() - 1;
+    pub fn handle_draw_from_discard_pile(&mut self, player_id: u32) -> Result<Card, Error> {
+        if !self.is_turn(player_id) {
+            return Err(Error::NotATurn);
+        }
+        //
+        // If player has drawn a card from stock pile before, return error
         if &Some(DrawSource::StockPile) == &self.current_turn.draw_source {
             return Err(Error::RepeatTurn);
         }
+        //
+        // Set the max draw
+        let mut max_draw = self.players.len() - 1;
 
-        if let Some(arr) = &self.current_turn.drawn_card {
-            if arr.len() > self.players.len() - 1 {
-                return Err(Error::TooManyDraw);
-            }
+        if let Some(cards) = &self.current_turn.drawn_card {
+            max_draw -= cards.len();
         }
 
-        let mut pile = self.discard_pile.iter().rev().peekable();
+        if max_draw == 0 {
+            return Err(Error::TooManyDraw);
+        }
+
+        let mut pile = self.discard_pile.iter().rev();
 
         let player = self.players.get_mut(&player_id).unwrap();
         let player_card: HashSet<&Card> = player.hand_cards.iter().collect();
 
+        let mut is_eligible: bool = false;
+
         for _ in 0..max_draw {
-            if let Some(card) = pile.peek() {
-                let is_eligible = Room::check_card_eligibility(
-                    *card,
+            if let Some(card) = pile.next() {
+                let is_elig = Room::check_card_eligibility(
+                    card,
                     &player_card,
                     !player.melded_cards.is_empty(),
+                    self.config.allow_railing,
                 );
-                if !is_eligible {
-                    return Err(Error::Ineligible);
+
+                if is_elig {
+                    is_eligible = true;
                 }
             }
-            pile.next();
+        }
+
+        if !is_eligible {
+            return Err(Error::Ineligible);
         }
 
         if let Some(card) = self.discard_pile.pop() {
-            if let None = self.current_turn.drawn_card {
-                self.current_turn.drawn_card = Some(Vec::new());
+            if let Some(vec) = &mut self.current_turn.drawn_card {
+                vec.push(card);
+            } else {
+                self.current_turn.drawn_card = Some(vec![card])
             }
 
-            let current_turn_drawn_cards = self.current_turn.drawn_card.as_mut().unwrap();
-
-            current_turn_drawn_cards.push(card);
             player.hand_cards.push(card);
 
-            if self.current_turn.draw_source == None {
-                self.current_turn.draw_source = Some(DrawSource::DiscardPile);
-            }
+            self.current_turn.draw_source = Some(DrawSource::DiscardPile);
 
             return Ok(card);
         } else {
@@ -346,13 +402,22 @@ impl Room {
         }
     }
 
-    pub async fn handle_draw_from_stock_pile(&mut self, player_id: u32) -> Result<Card, Error> {
-        let drawn_card = self.stock_pile.pop();
+    pub fn handle_draw_from_stock_pile(&mut self, player_id: u32) -> Result<Card, Error> {
+        if !self.is_turn(player_id) {
+            return Err(Error::NotATurn);
+        }
+
+        if let Some(_) = &self.current_turn.drawn_card {
+            return Err(Error::RepeatTurn);
+        }
+
         let player = self.players.get_mut(&player_id).unwrap();
 
-        if let Some(card) = drawn_card {
+        if let Some(card) = self.stock_pile.pop() {
             self.current_turn.draw_source = Some(DrawSource::StockPile);
+
             self.current_turn.drawn_card = Some(vec![card]);
+
             player.hand_cards.push(card);
             return Ok(card);
         }
@@ -361,14 +426,34 @@ impl Room {
     }
 
     pub fn handle_discard(&mut self, player_id: u32, card: Card) -> Result<Card, Error> {
-        let player = self.players.get_mut(&player_id).unwrap();
-
-        if let CardType::Joker(_) = card.card_type {
-            return Err(Error::DiscardAJoker)
+        if !self.is_turn(player_id) {
+            return Err(Error::NotATurn);
         }
+        //
+        //
+        // Consideration needed for this joker forbidement
+        // since it could causing deadlock if player's left cards are all jokers
+        if let CardType::Joker(_) = card.card_type {
+            return Err(Error::DiscardAJoker);
+        }
+
+        let player = self.players.get_mut(&player_id).unwrap();
 
         if card.card_type == CardType::Ace && player.melded_cards.is_empty() {
             return Err(Error::RequireMeld);
+        }
+
+        if let Some(_) = self.current_turn.discarded_card {
+            return Err(Error::RepeatTurn);
+        }
+
+        if !self.config.allow_court_stacking {
+            let top_card = self.discard_pile.last();
+            if let Some(top_card) = top_card {
+                if top_card.is_court() && card.is_court() {
+                    return Err(Error::InvalidCommand);
+                }
+            }
         }
 
         let card_index = player
@@ -397,36 +482,51 @@ impl Room {
             }
         }
 
-        let pivot = cards.get(0).unwrap();
+        let pivot = cards.iter().find(|item| !item.is_joker());
+
+        if let None = pivot {
+            return Err(Error::Ineligible);
+        }
+
         let cards_hs: HashSet<&Card> = cards.iter().collect();
 
-        let res = Room::check_card_eligibility(pivot, &cards_hs, !player.melded_cards.is_empty());
+        let res = Room::check_card_eligibility(
+            pivot.unwrap(),
+            &cards_hs,
+            !player.melded_cards.is_empty(),
+            self.config.allow_railing,
+        );
 
         if res {
+            if self.player_turns[self.current_turn.index] == player_id {
+                if let Some(DrawSource::DiscardPile) = self.current_turn.draw_source {
+                    let mut contains_drawn_card = false;
+                    for i in self.current_turn.drawn_card.as_ref().unwrap() {
+                        if cards.contains(i) {
+                            contains_drawn_card = true;
+                            break;
+                        }
+                    }
+
+                    if !contains_drawn_card {
+                        return Err(Error::DrawnCardRequired);
+                    }
+                }
+                if let Some(arr) = &mut self.current_turn.melded_card {
+                    arr.append(&mut cards.clone());
+                } else {
+                    self.current_turn.melded_card = Some(cards.clone())
+                }
+            }
+
+            let player = self.players.get_mut(&player_id).unwrap();
+            player.melded_cards.push(cards.clone());
+
+            println!("{:?}", player.melded_cards);
+            
             return Ok(cards);
         }
 
         return Err(Error::Ineligible);
-    }
-
-    pub fn handle_put(&mut self, player_id: u32, cards: Vec<Card>) -> Result<Vec<Card>, Error> {
-        let player = self.players.get_mut(&player_id).unwrap();
-
-        let mut temp_hand_cards = player.hand_cards.clone();
-        let mut cards_to_put: Vec<Card> = Vec::new();
-
-        for i in &cards {
-            if let Some(index) = temp_hand_cards.iter().position(|item| item == i) {
-                let removed_card = temp_hand_cards.remove(index);
-                cards_to_put.push(removed_card);
-            } else {
-                return Err(Error::CardNotFound);
-            }
-        }
-
-        player.hand_cards = temp_hand_cards;
-        player.putted_cards.extend(cards_to_put.clone());
-
-        return Ok(cards_to_put);
     }
 }

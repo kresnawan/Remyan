@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use strum_macros::EnumIter;
 use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 
 #[derive(Debug, EnumIter, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub enum CourtType {
@@ -21,6 +21,27 @@ pub enum CardIcon {
     Diamond,
     Spade,
     Club,
+}
+
+impl CardIcon {
+    pub fn from_number(number: usize) -> Option<CardIcon> {
+        match number {
+            0 => Some(CardIcon::Spade),
+            1 => Some(CardIcon::Heart),
+            2 => Some(CardIcon::Diamond),
+            3 => Some(CardIcon::Club),
+
+            _ => None
+        }
+    }
+    pub fn as_number(&self) -> usize {
+        match self {
+            CardIcon::Spade => 0,
+            CardIcon::Heart => 1,
+            CardIcon::Diamond => 2,
+            CardIcon::Club => 3
+        }
+    } 
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash)]
@@ -51,6 +72,12 @@ pub struct Card {
 }
 
 impl Card {
+    pub fn new(card_icon: Option<CardIcon>, card_type: CardType) -> Card {
+        Card {
+            card_icon,
+            card_type,
+        }
+    }
     pub fn get_card_power(&self) -> u32 {
         match &self.card_type {
             CardType::Joker(_) => {
@@ -90,5 +117,37 @@ impl Card {
         }
 
         return None;
+    }
+
+    pub fn is_court(&self) -> bool {
+        if let CardType::Court(_) = self.card_type {
+            return true;
+        }
+
+        false
+    }
+
+    pub fn is_joker(&self) -> bool {
+        if let CardType::Joker(_) = &self.card_type {
+            return true
+        }
+
+        return false
+    }
+
+    pub fn get_color_type(&self) -> Option<JokerType> {
+        if let Some(icon) = self.card_icon {
+            if icon == CardIcon::Club || icon == CardIcon::Spade {
+                return Some(JokerType::Black);
+            } else {
+                return Some(JokerType::Red);
+            }
+        }
+
+        return None;
+    }
+
+    pub fn joker(joker_type: JokerType) -> Card {
+        Card { card_icon: None, card_type: CardType::Joker(joker_type) }
     }
 }
