@@ -125,6 +125,9 @@ impl Page for Room {
                             ))
                             .unwrap();
                             ws.send_text(&msg);
+                            
+                            #[cfg(target_arch = "wasm32")]
+                            ws.close();
 
                             return Some(n);
                         }

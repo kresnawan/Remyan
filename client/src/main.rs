@@ -20,7 +20,7 @@ fn window_config() -> Conf {
 #[macroquad::main(window_config)]
 async fn main() {
     #[cfg(target_arch = "wasm32")]
-    console_log("Hello from Rust!");
+    console_log("Hello from Rust! Small update");
 
     #[cfg(target_arch = "wasm32")]
     panic::set_hook(Box::new(|panic_info| {

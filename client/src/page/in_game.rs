@@ -11,7 +11,7 @@ use macroquad::{
     window::clear_background,
 };
 use remyan_core::{
-    Card, Deck,
+    Card,
     protocol::{
         DrawSource,
         command::{GameCommand, TurnCommand},
@@ -20,8 +20,13 @@ use remyan_core::{
 };
 
 use crate::{
-    app::CardTextures, page::Page, state::State, ui::{
-        config::parent::ParentState, three_dimensional::{card::CardElement, ray::get_mouse_ray, turn_arrow::TurnArrow}, traits::object::Object,
+    app::CardTextures,
+    page::Page,
+    state::State,
+    ui::{
+        config::parent::ParentState,
+        three_dimensional::{card::CardElement, ray::get_mouse_ray, turn_arrow::TurnArrow},
+        traits::object::Object,
     },
 };
 
@@ -77,7 +82,6 @@ impl InGame {
         };
 
         let stock_pile = InGame::init_stock_pile(card_textures.clone());
-        println!("{}", stock_pile.len());
         return Self {
             discard_pile: Vec::new(),
             player_turns: Vec::new(),
@@ -215,29 +219,15 @@ impl InGame {
     }
 
     fn meld(&mut self) {
-        let mut previous_index = usize::MIN;
-
-        let mut offset: usize = 0;
+        self.selected_cards_for_meld
+            .sort_unstable_by(|a, b| b.cmp(a));
 
         for i in &self.selected_cards_for_meld {
-            let mut transformed_index = *i;
+            let card = self.hand.remove(*i);
 
-            if previous_index <= transformed_index {
-                if offset > transformed_index {
-                    transformed_index = 0;
-                } else {
-                    transformed_index -= offset;
-                }
-
-                offset += 1;
-            }
-
-            let mut card = self.hand.remove(transformed_index);
-
-            card.set_target(vec3(-1.5, 0., 0.), vec3(90., 90., 0.));
+            // card.set_target(vec3(-1.5, 0., 0.), vec3(90., 90., 0.));
 
             self.melded_cards.push(card);
-            previous_index = transformed_index;
         }
 
         self.selected_cards_for_meld.clear();
@@ -494,20 +484,38 @@ impl InGame {
         let count = self.hand.len() as f32;
 
         let start_z = ((count - 1.0) * spacing_x) / 2.0;
-        let base_target_pos = vec3(-1.8, 0.8 / 2., start_z);
+        let mut base_target_pos = vec3(-1.8, 0.8 / 2., start_z);
         let x_degree = self.calculate_look_at_cam_tilt(base_target_pos) + 180.;
         let target_rot = vec3(x_degree, 90.0, 0.0);
 
+        if let Some(ind) = self.selected_card_index {
+            if ind == 0 {
+                base_target_pos.y = 0.7;
+            }
+        } else if self.selected_cards_for_meld.contains(&0) {
+            base_target_pos.y = 0.7;
+        }
+
         self.hand[0].set_target_with_dim(base_target_pos, target_rot, 0.8);
 
+        let base_target_pos = vec3(-1.8, 0.8 / 2., start_z);
+
         for i in 1..self.hand.len() {
-            let new_target_pos = CardElement::get_indexed_position(
+            let mut new_target_pos = CardElement::get_indexed_position(
                 base_target_pos,
                 target_rot,
                 i as f32,
                 spacing_x,
                 spacing_z,
             );
+
+            if let Some(ind) = self.selected_card_index {
+                if ind == i {
+                    new_target_pos.y = 0.7;
+                }
+            } else if self.selected_cards_for_meld.contains(&i) {
+                new_target_pos.y = 0.7;
+            }
 
             let card = &mut self.hand[i];
 
@@ -776,11 +784,7 @@ impl InGame {
                                 }
                             }
                         }
-
-                        println!("{}", self.stock_pile.len());
                     }
-
-                    
                 }
             },
             GameEvent::PlayersTurn(arr) => {
@@ -804,8 +808,6 @@ impl InGame {
                     card_element.set_card(Some(&card));
                     self.draw_for_hand(card_element);
                 }
-
-                println!("{}", self.stock_pile.len());
             }
         }
     }
@@ -915,8 +917,6 @@ impl Page for InGame {
 
                 self.shared_cards += 1;
 
-                println!("{}", self.stock_pile.len());
-
                 if self.shared_cards >= self.player_turns.len() as u8 * 6 {
                     self.is_sharing_card = None;
                 }
@@ -970,6 +970,10 @@ impl Page for InGame {
 
         if is_key_released(KeyCode::O) {
             self.is_melding = !self.is_melding;
+            self.selected_cards_for_meld.clear();
+            self.selected_card_index = None;
+
+            self.rearrange_hand();
         }
 
         self.update_card_interaction();
@@ -991,9 +995,6 @@ impl Page for InGame {
             if is_mouse_button_released(MouseButton::Left) {
                 if let Some(index) = self.hovered_card_index {
                     if self.selected_cards_for_meld.contains(&index) {
-                        let card: &mut CardElement = &mut self.hand[index];
-
-                        card.set_target(vec3(card.position.x, 0.4, card.position.z), card.rotation);
                         let mut index_to_remove: usize = 0;
                         for (i, val) in &mut self.selected_cards_for_meld.iter().enumerate() {
                             if *val == index {
@@ -1001,12 +1002,14 @@ impl Page for InGame {
                             }
                         }
                         self.selected_cards_for_meld.remove(index_to_remove);
+                        self.rearrange_hand();
                     } else {
-                        let card: &mut CardElement = &mut self.hand[index];
-
-                        card.set_target(vec3(card.position.x, 0.7, card.position.z), card.rotation);
                         self.selected_cards_for_meld.push(index);
+                        self.rearrange_hand();
                     }
+                } else {
+                    self.selected_cards_for_meld.clear();
+                    self.rearrange_hand();
                 }
             }
         } else {
@@ -1022,10 +1025,8 @@ impl Page for InGame {
                         self.rearrange_hand();
                     } else {
                         self.rearrange_hand();
-                        let card: &mut CardElement = &mut self.hand[index];
-
-                        card.set_target(vec3(card.position.x, 0.7, card.position.z), card.rotation);
                         self.selected_card_index = Some(index);
+                        self.rearrange_hand();
                     }
                 } else {
                     if mx >= screen_width() / 2. - 100.
@@ -1055,8 +1056,8 @@ impl Page for InGame {
                             )));
                         }
                     } else {
-                        self.rearrange_hand();
                         self.selected_card_index = None;
+                        self.rearrange_hand();
                     }
 
                     if self.is_hover_stock_pile {

@@ -1,4 +1,5 @@
 use std::{collections::HashMap, process::exit, sync::Arc};
+use remyan_core::protocol::Error;
 
 use macroquad::{
     color::GREEN,
@@ -11,10 +12,11 @@ use quad_net::{
 };
 use remyan_core::{CardIcon, CardType, CourtType, Deck, JokerType, RoomConfig, SpotNumber};
 
+#[cfg(target_arch = "wasm32")]
+use crate::console_log;
+
 use crate::{
-    page::{Page, main_menu::MainMenu, room::Room},
-    state::State,
-    ui::config::font::Nunito,
+    page::{Page, main_menu::MainMenu, room::Room}, state::State, ui::config::font::Nunito,
 };
 
 #[derive(Clone)]
@@ -182,7 +184,7 @@ impl App {
 
         loop {
             if let GameState::Loading(typ) = self.game_state.clone() {
-                clear_background(GREEN);
+                // clear_background(GREEN);
                 self.handle_loading_state(&typ).await;
             } else {
                 self.handle_running_state().await;
@@ -202,7 +204,7 @@ impl App {
 
                 match v {
                     Ok(id) => {
-                        let parsed: u32 = id.parse().unwrap();
+                        let parsed: u32 = id.parse().unwrap_or(0);
 
                         println!("{}", parsed);
                         self.player_id = Some(parsed);
@@ -223,6 +225,7 @@ impl App {
                 };
 
                 let Some(value) = req.try_recv() else {
+                    self.game_state = GameState::Running;
                     return;
                 };
 
@@ -311,12 +314,22 @@ impl App {
                 State::CreateRoom => {
                     let room_config = RoomConfig::default();
                     let room_config_str = serde_json::to_string(&room_config).unwrap();
+                    
+                    #[cfg(target_arch = "wasm32")]
                     let req = RequestBuilder::new("http://localhost:6767/room/create")
                         .method(Method::Post)
-                        // .header("Cookie", &format!("id={}", self.player_id.unwrap()))
                         .header("Content-Type", "application/json")
                         .body(&room_config_str)
                         .send();
+
+                    #[cfg(not(target_arch = "wasm32"))]
+                    let req = RequestBuilder::new("http://localhost:6767/room/create")
+                        .method(Method::Post)
+                        .header("Cookie", &format!("id={}", self.player_id.unwrap()))
+                        .header("Content-Type", "application/json")
+                        .body(&room_config_str)
+                        .send();
+                    
                     self.create_room_request = Some(req);
                     self.game_state = GameState::Loading(Loading::CreateRoom);
                     self.global_state = None;
