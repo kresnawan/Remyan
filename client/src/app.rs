@@ -1,5 +1,5 @@
 use std::{collections::HashMap, process::exit, sync::Arc};
-use remyan_core::protocol::Error;
+use remyan_core::{NumberOfJokers, protocol::Error};
 
 use macroquad::{
     color::GREEN,
@@ -45,7 +45,7 @@ pub struct CardTextures {
 impl CardTextures {
     pub async fn load() -> CardTextures {
         let mut cards: HashMap<remyan_core::Card, Texture2D> = HashMap::new();
-        let mut deck = Deck::new(true);
+        let mut deck = Deck::new(Some(NumberOfJokers::Two));
         while let Some(card) = deck.cards.pop() {
             let mut file_name = String::new();
             if let Some(icon) = card.card_icon {

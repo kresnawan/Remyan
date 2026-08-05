@@ -11,8 +11,7 @@ use macroquad::{
     window::clear_background,
 };
 use remyan_core::{
-    Card,
-    protocol::{
+    Card, NumberOfJokers, protocol::{
         DrawSource,
         command::{GameCommand, TurnCommand},
         event::{GameEvent, TurnEvent},
@@ -49,6 +48,8 @@ pub struct InGame {
     shared_cards: u8,
     player_turns: Vec<u32>,
     self_index: usize,
+    stock_number: usize,
+    each_hand: usize,
     stock_pile: Vec<CardElement>,
     discard_pile: Vec<CardElement>,
     opp_1_hand: Vec<CardElement>,
@@ -73,7 +74,7 @@ pub struct InGame {
 }
 
 impl InGame {
-    pub fn new(card_textures: Arc<CardTextures>, self_id: u32) -> Self {
+    pub fn new(card_textures: Arc<CardTextures>, self_id: u32, joker: &Option<NumberOfJokers>) -> Self {
         let cam = Camera3D {
             position: vec3(-3.5, 4.0, 0.0),
             up: vec3(0.0, 1.0, 0.0),
@@ -81,7 +82,7 @@ impl InGame {
             ..Default::default()
         };
 
-        let stock_pile = InGame::init_stock_pile(card_textures.clone());
+        let stock_pile = InGame::init_stock_pile(card_textures.clone(), joker.clone());
         return Self {
             discard_pile: Vec::new(),
             player_turns: Vec::new(),
@@ -91,6 +92,8 @@ impl InGame {
             hand: Vec::new(),
             is_sharing_card: None,
             shared_cards: 0,
+            stock_number: 0,
+            each_hand: 0,
             stock_pile,
             is_hover_stock_pile: false,
             selected_card_index: None,
@@ -113,9 +116,14 @@ impl InGame {
         };
     }
 
-    fn init_stock_pile(card_textures: Arc<CardTextures>) -> Vec<CardElement> {
+    fn init_stock_pile(card_textures: Arc<CardTextures>, joker: Option<NumberOfJokers>) -> Vec<CardElement> {
         let mut result: Vec<CardElement> = Vec::new();
-        for _ in 0..54 {
+        let base_number_of_card = 10;
+        // if let Some(num) = joker {
+        //     base_number_of_card += num.as_number()
+        // }
+
+        for _ in 0..base_number_of_card {
             let mut new_card = CardElement::new(
                 STOCK_PILE_POS,
                 STOCK_PILE_ROT,
@@ -298,6 +306,100 @@ impl InGame {
 
             let card = &mut self.melded_cards[i];
             card.set_target(new_target_pos, vec3(270., 90., 0.0));
+        }
+    }
+
+
+    fn drop_opp_1_hand(&mut self, mut cards: Vec<Card>) {
+        if self.opp_1_hand.is_empty() {
+            return;
+        }
+
+        let spacing_x = 0.1;
+        let spacing_z = 0.002;
+        let count = self.opp_1_hand.len() as f32;
+
+        let start_x = ((count - 1.0) * spacing_x) / 2.0;
+        let base_target_pos = vec3(start_x, 0., -2.5);
+        let target_rot = vec3(-90., 0., 180.0);
+
+        self.opp_1_hand[0].set_card(Some(&cards.pop().unwrap()));
+        self.opp_1_hand[0].set_target(base_target_pos, target_rot);
+
+        for i in 1..self.opp_1_hand.len() {
+            let new_target_pos = CardElement::get_indexed_position(
+                base_target_pos,
+                target_rot,
+                i as f32,
+                spacing_x,
+                spacing_z,
+            );
+
+            let card = &mut self.opp_1_hand[i];
+            card.set_card(Some(&cards.pop().unwrap()));
+            card.set_target(new_target_pos, target_rot);
+        }
+    }
+
+    fn drop_opp_2_hand(&mut self, mut cards: Vec<Card>) {
+        if self.opp_2_hand.is_empty() {
+            return;
+        }
+
+        let spacing_x = 0.1;
+        let spacing_z = 0.002;
+        let count = self.opp_2_hand.len() as f32;
+
+        let start_x = ((count - 1.0) * -spacing_x) / 2.0;
+        let base_target_pos = vec3(start_x, 0., 2.5);
+        let target_rot = vec3(-90., 0., 0.0);
+
+        self.opp_2_hand[0].set_card(Some(&cards.pop().unwrap()));
+        self.opp_2_hand[0].set_target(base_target_pos, target_rot);
+
+        for i in 1..self.opp_2_hand.len() {
+            let new_target_pos = CardElement::get_indexed_position(
+                base_target_pos,
+                target_rot,
+                i as f32,
+                spacing_x,
+                spacing_z,
+            );
+
+            let card = &mut self.opp_2_hand[i];
+            card.set_card(Some(&cards.pop().unwrap()));
+            card.set_target(new_target_pos, target_rot);
+        }
+    }
+
+    fn drop_opp_3_hand(&mut self, mut cards: Vec<Card>) {
+        if self.opp_3_hand.is_empty() {
+            return;
+        }
+
+        let spacing_x = 0.1;
+        let spacing_z = 0.002;
+        let count = self.opp_3_hand.len() as f32;
+
+        let start_x = ((count - 1.0) * spacing_x) / 2.0;
+        let base_target_pos = vec3(2.5, 0., start_x);
+        let target_rot = vec3(-90., 90., 0.0);
+
+        self.opp_3_hand[0].set_card(Some(&cards.pop().unwrap()));
+        self.opp_3_hand[0].set_target(base_target_pos, target_rot);
+
+        for i in 1..self.opp_3_hand.len() {
+            let new_target_pos = CardElement::get_indexed_position(
+                base_target_pos,
+                target_rot,
+                i as f32,
+                spacing_x,
+                spacing_z,
+            );
+
+            let card = &mut self.opp_3_hand[i];
+            card.set_card(Some(&cards.pop().unwrap()));
+            card.set_target(new_target_pos, target_rot);
         }
     }
 
@@ -797,16 +899,38 @@ impl InGame {
                 self.player_turns = arr;
             }
 
-            GameEvent::PlayerCard(cards) => {
+            GameEvent::SelfCard { cards, stock_number, each_hand } => {
                 self.is_sharing_card =
                     self.get_placement(self.player_turns[self.current_index_share]);
                 self.self_cards = cards;
+                self.stock_number = stock_number;
+                self.each_hand = each_hand;
+
             }
             GameEvent::DrawnCard(card) => {
                 let card_option = self.pop_from_stock_pile();
                 if let Some(mut card_element) = card_option {
                     card_element.set_card(Some(&card));
                     self.draw_for_hand(card_element);
+                }
+            }
+            GameEvent::PlayersHands(ps) => {
+                for (pid, hand) in ps {
+                    if let Some(p) = self.get_placement(pid) {
+                        match p {
+                            PlayerPlacement::Right => {
+                                self.drop_opp_2_hand(hand);
+                            }
+                            PlayerPlacement::Front => {
+                                self.drop_opp_3_hand(hand);
+                            }
+                            PlayerPlacement::Left => {
+                                self.drop_opp_1_hand(hand);
+                            }
+
+                            _ => {}
+                        }
+                    }
                 }
             }
         }
@@ -917,7 +1041,7 @@ impl Page for InGame {
 
                 self.shared_cards += 1;
 
-                if self.shared_cards >= self.player_turns.len() as u8 * 6 {
+                if self.shared_cards as usize >= self.player_turns.len() * self.each_hand {
                     self.is_sharing_card = None;
                 }
 

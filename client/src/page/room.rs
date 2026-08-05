@@ -230,7 +230,7 @@ impl Page for Room {
 
                 RoomEvent::StartGame => {
                     self.in_game_page =
-                        Some(InGame::new(self.card_textures.clone(), self.player_id));
+                        Some(InGame::new(self.card_textures.clone(), self.player_id, &self.room_config.joker));
                 }
                 RoomEvent::GameEnded => {
                     println!("Game selesai")
