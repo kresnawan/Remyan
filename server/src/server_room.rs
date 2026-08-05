@@ -6,14 +6,14 @@ use crate::Tx;
 
 pub struct ServerRoom {
     pub room_id: [u8; 6],
-    pub txs: HashMap<u32, Option<Tx>>,
-    pub counter: u32,
+    pub txs: HashMap<u32, Option<Tx>>
 }
 
 impl ServerRoom {
     pub fn new(room_id: [u8; 6]) -> Self {
-        ServerRoom { room_id, txs: HashMap::new(), counter: 0 }
+        ServerRoom { room_id, txs: HashMap::new() }
     }
+    
     pub async fn broadcast(&mut self, all: bool, sender: u32, token: EventToken) {
         let serialized = serde_json::to_string(&token).unwrap();
         
@@ -36,7 +36,11 @@ impl ServerRoom {
 
             let core_player = room.players.get(&pid).unwrap();
 
-            let token = EventToken::GameEvent(GameEvent::PlayerCard(core_player.hand_cards.clone()));
+            let token = EventToken::GameEvent(GameEvent::SelfCard {
+                cards: core_player.hand_cards.clone(),
+                stock_number: 10,
+                each_hand: 3
+            });
             let serialized = serde_json::to_string(&token).unwrap();
             let payload = Utf8Bytes::from(serialized);
 

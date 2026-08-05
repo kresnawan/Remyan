@@ -1,10 +1,13 @@
 use std::time::Duration;
 
 use axum::extract::ws::Utf8Bytes;
-use remyan_core::protocol::{
-    DrawSource, Error,
-    command::{CommandToken, GameCommand, RoomCommand, TurnCommand},
-    event::{EventToken, GameEvent, RoomEvent, ServerEvent, TurnEvent},
+use remyan_core::{
+    TurnType,
+    protocol::{
+        DrawSource, Error,
+        command::{CommandToken, GameCommand, RoomCommand, TurnCommand},
+        event::{EventToken, GameEvent, RoomEvent, ServerEvent, TurnEvent},
+    },
 };
 
 use crate::{AppInstance, ServerInstance, ws::command_parser::parse_command};
@@ -112,9 +115,10 @@ pub async fn handle_game_command(
     let command = parse_command(command);
 
     if let Ok(CommandToken::GameCommand(token)) = command {
-        let current_counter = {
+        let current_counter: Option<u32> = {
             let mut server_instance = server.lock().await;
             let server_room = server_instance.rooms.get_mut(&room_id).unwrap();
+            
             let mut instance = app.lock().await;
             let room = instance.room_manager.rooms.get_mut(&room_id).unwrap();
 
@@ -132,7 +136,7 @@ pub async fn handle_game_command(
                                     })),
                                 )
                                 .await;
-                            server_room.counter += 1;
+                            room.counter += 1;
                         }
                         Err(err) => {
                             server_room
@@ -147,7 +151,18 @@ pub async fn handle_game_command(
                     TurnCommand::Draw(draw) => {
                         if let DrawSource::DiscardPile = draw {
                             match room.handle_draw_from_discard_pile(player_id) {
-                                Ok(_) => {
+                                Ok((_, is_interrupting)) => {
+                                    if is_interrupting {
+                                        server_room
+                                            .broadcast(
+                                                true,
+                                                player_id,
+                                                EventToken::GameEvent(GameEvent::CurrentTurn(
+                                                    room.player_turns[room.current_turn.index],
+                                                )),
+                                            )
+                                            .await;
+                                    }
                                     server_room
                                         .broadcast(
                                             true,
@@ -160,7 +175,7 @@ pub async fn handle_game_command(
                                             )),
                                         )
                                         .await;
-                                    server_room.counter += 1;
+                                    room.counter += 1;
                                 }
                                 Err(err) => {
                                     server_room
@@ -194,7 +209,7 @@ pub async fn handle_game_command(
                                             player_id,
                                         )
                                         .await;
-                                    server_room.counter += 1;
+                                    room.counter += 1;
                                 }
                                 Err(err) => {
                                     server_room
@@ -222,7 +237,7 @@ pub async fn handle_game_command(
                             )
                             .await;
                         if room.player_turns[room.current_turn.index] == player_id {
-                            server_room.counter += 1;
+                            room.counter += 1;
                         } else {
                             return;
                         }
@@ -239,40 +254,74 @@ pub async fn handle_game_command(
                 },
             }
 
-            server_room.counter
+            let ho = room.check_current_turn();
+
+            if let Some(_) = ho {
+                room.current_turn.reset();
+                let ph = room.get_players_hand();
+                server_room
+                    .broadcast(
+                        true,
+                        player_id,
+                        EventToken::GameEvent(GameEvent::PlayersHands(ph)),
+                    )
+                    .await;
+
+                server_room
+                    .broadcast(true, player_id, EventToken::RoomEvent(RoomEvent::GameEnded))
+                    .await;
+                return;
+            }
+
+            println!("{:?}", ho);
+
+            Some(room.counter)
         };
 
-        tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_secs(2)).await;
+        if let Some(current_counter) = current_counter {
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_secs(2)).await;
 
-            let mut server_instance = server.lock().await;
-            let mut app_instance = app.lock().await;
+                let mut server_instance = server.lock().await;
+                let mut app_instance = app.lock().await;
 
-            let server_room = server_instance.rooms.get_mut(&room_id).unwrap();
-            let app_room = app_instance.room_manager.rooms.get_mut(&room_id).unwrap();
+                let server_room = server_instance.rooms.get_mut(&room_id).unwrap();
+                let app_room = app_instance.room_manager.rooms.get_mut(&room_id).unwrap();
 
-            if server_room.counter == current_counter {
-                if let Some(turn_done) = app_room.try_next_turn() {
-                    if turn_done {
+                if app_room.counter == current_counter {
+                    if let Some(turn_done) = app_room.try_next_turn() {
+                        if turn_done {
+                            app_room.current_turn.reset();
+                            server_room
+                                .broadcast(
+                                    true,
+                                    player_id,
+                                    EventToken::GameEvent(GameEvent::CurrentTurn(
+                                        app_room.player_turns[app_room.current_turn.index],
+                                    )),
+                                )
+                                .await;
+                        }
+                    } else {
                         app_room.current_turn.reset();
+                        let ph = app_room.get_players_hand();
                         server_room
                             .broadcast(
                                 true,
                                 player_id,
-                                EventToken::GameEvent(GameEvent::CurrentTurn(
-                                    app_room.player_turns[app_room.current_turn.index],
-                                )),
+                                EventToken::GameEvent(GameEvent::PlayersHands(ph)),
                             )
                             .await;
+
+                        tokio::time::sleep(Duration::from_secs(5)).await;
+
+                        server_room
+                            .broadcast(true, player_id, EventToken::RoomEvent(RoomEvent::GameEnded))
+                            .await;
                     }
-                } else {
-                    app_room.current_turn.reset();
-                    server_room
-                        .broadcast(true, player_id, EventToken::RoomEvent(RoomEvent::GameEnded))
-                        .await;
                 }
-            }
-        });
+            });
+        }
     } else {
         let server_instance = server.lock().await;
         let server_room = server_instance.rooms.get(&room_id).unwrap();
