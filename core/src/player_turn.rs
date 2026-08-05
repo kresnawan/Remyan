@@ -4,9 +4,11 @@ use crate::{Card, protocol::DrawSource};
 pub struct PlayerTurn {
     pub index: usize,
     pub draw_source: Option<DrawSource>,
-    pub drawn_card: Option<Vec<Card>>,
+    pub drawn_card: Option<Vec<(Option<u32>, Card)>>,
     pub melded_card: Option<Vec<Card>>,
     pub discarded_card: Option<Card>,
+    pub is_hit: bool,
+    pub is_closing: bool
 }
 
 impl PlayerTurn {
@@ -17,6 +19,8 @@ impl PlayerTurn {
             drawn_card: None,
             melded_card: None,
             discarded_card: None,
+            is_hit: false,
+            is_closing: false
         }
     }
 

@@ -6,6 +6,15 @@ pub enum NumberOfJokers {
     Four,
 }
 
+impl NumberOfJokers {
+    pub fn as_number(&self) -> usize {
+        match self {
+            NumberOfJokers::Two => 2,
+            NumberOfJokers::Four => 4
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RoomConfig {
     pub allow_court_stacking: bool,
@@ -40,11 +49,11 @@ impl RoomConfig {
     pub fn default() -> Self {
         Self {
             allow_court_stacking: false,
-            free_hit: false,
+            free_hit: true,
             allow_railing: false,
             joker: None,
             hitter_scoring: false,
-            allow_closing: false,
+            allow_closing: true,
         }
     }
 }

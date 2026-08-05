@@ -78,7 +78,7 @@ impl Card {
             card_type,
         }
     }
-    pub fn get_card_power(&self) -> u32 {
+    pub fn get_unmelded_weight(&self) -> u32 {
         match &self.card_type {
             CardType::Joker(_) => {
                 return 25;
@@ -93,6 +93,27 @@ impl Card {
                 return 5;
             }
         }
+    }
+
+    pub fn get_meld_weight(&self) -> u32 {
+        match &self.card_type {
+            CardType::Joker(_) => {
+                return 5;
+            }
+            CardType::Ace => {
+                return self.get_unmelded_weight();
+            }
+            CardType::Court(_) => {
+                return self.get_unmelded_weight();
+            }
+            CardType::Spot(_) => {
+                return self.get_unmelded_weight();
+            }
+        }
+    }
+
+    pub fn get_hit_weight(&self) -> u32 {
+        self.get_unmelded_weight() * 10
     }
 
     pub fn get_spot_index(&self) -> Option<usize> {

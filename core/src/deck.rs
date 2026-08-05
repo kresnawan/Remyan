@@ -3,7 +3,7 @@ use rand::seq::SliceRandom;
 
 use strum::IntoEnumIterator;
 
-use crate::{Card, CardIcon, CardType, CourtType, JokerType, SpotNumber};
+use crate::{Card, CardIcon, CardType, CourtType, JokerType, NumberOfJokers, SpotNumber};
 
 #[derive(Debug)]
 pub struct Deck {
@@ -11,7 +11,7 @@ pub struct Deck {
 }
 
 impl Deck {
-    pub fn new(with_joker: bool) -> Self {
+    pub fn new(joker: Option<NumberOfJokers>) -> Self {
         let mut deck: Vec<Card> = Vec::new();
 
         for i in CardIcon::iter() {
@@ -35,12 +35,14 @@ impl Deck {
             }
         }
 
-        if with_joker {
+        if let Some(number) = joker {
             for joker_type in JokerType::iter() {
-                deck.push(Card {
-                    card_icon: None,
-                    card_type: CardType::Joker(joker_type.clone()),
-                });
+                for _ in 0..number.as_number() / 2 {
+                    deck.push(Card {
+                        card_icon: None,
+                        card_type: CardType::Joker(joker_type.clone()),
+                    });
+                }
             }
         }
 
@@ -63,7 +65,7 @@ impl Deck {
                 card_type: CardType::Spot(spot_number),
             });
         }
-        
+
         for spot_number in SpotNumber::iter() {
             deck.push(Card {
                 card_icon: Some(CardIcon::Spade),

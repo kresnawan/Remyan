@@ -25,5 +25,7 @@ pub enum Error {
     AlreadyJoined,
     RoomNotFound,
     TooManyPlayers,
-    DrawnCardRequired
+    DrawnCardRequired,
+    ClosingDisallowed,
+    FreeHitDisallowed
 }

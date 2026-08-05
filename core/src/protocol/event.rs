@@ -36,7 +36,12 @@ pub enum GameEvent {
     Turn(TurnEvent),
     CurrentTurn(u32),
     PlayersTurn(Vec<u32>),
-    PlayerCard(Vec<Card>),
+    PlayersHands(Vec<(u32, Vec<Card>)>),
+    SelfCard {
+        cards: Vec<Card>,
+        stock_number: usize,
+        each_hand: usize,
+    },
     DrawnCard(Card),
 }
 
