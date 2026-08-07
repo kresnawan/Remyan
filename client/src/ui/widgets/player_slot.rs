@@ -1,9 +1,10 @@
 use std::{any::Any, sync::Arc};
 
 use macroquad::color::{BLANK, Color};
+use remyan_core::protocol::event::ServerEventPlayer;
 
 use crate::{
-    state::{PlayerJoinStruct, State},
+    state::State,
     ui::{
         config::{
             dimension::{DynamicDimension::Full, ObjectDimension},
@@ -25,10 +26,12 @@ use crate::{
 };
 
 pub struct PlayerSlotState {
-    pub player: Option<PlayerJoinStruct>,
+    pub player: Option<ServerEventPlayer>,
     pub is_hovered: bool,
     pub is_pressed: bool,
     pub is_clicked: bool,
+    pub is_host: bool,
+    pub is_self: bool
 }
 
 impl PlayerSlotState {
@@ -38,6 +41,8 @@ impl PlayerSlotState {
             is_hovered: false,
             is_pressed: false,
             is_clicked: false,
+            is_host: false,
+            is_self: false
         }
     }
 }
@@ -133,39 +138,28 @@ impl Object for PlayerSlot {
             self.plus.draw();
         }
 
-        if let Some(value) = &self.state.player {
-            if value.is_room_host {
-                self.host_text.draw();
-            }
+        if self.state.is_host {
+            self.host_text.draw();
         }
     }
 
-    fn update(
-        &mut self,
-        parent_state: ParentState,
-        state: &Option<State>,
-    ) -> Option<State> {
+    fn update(&mut self, parent_state: ParentState, state: &Option<State>) -> Option<State> {
         self.update_parent_state(parent_state);
         self.update_dimension();
         self.update_alignment();
 
         if let Some(value) = &self.state.player {
-            let (bg_color, outline_color) = if value.is_self {
+
+            let (bg_color, outline_color) = if self.state.is_self {
                 (Color::from_hex(0x02316e), Color::from_hex(0x073f87))
             } else {
                 (Color::from_hex(0x363636), Color::from_hex(0x454545))
             };
-            self.rec_fill.config.color = Gradient::new(
-                0.0,
-                vec![bg_color, bg_color],
-            );
+
+            self.rec_fill.config.color = Gradient::new(0.0, vec![bg_color, bg_color]);
             self.rec_outline.config.outline_color = outline_color;
 
-            if let Some(name) = &value.name_alias {
-                self.player_name.value = name.clone();
-            } else {
-                self.player_name.value = format!("{}", value.id);
-            }
+            self.player_name.value = value.name_alias.clone();
         } else {
             self.rec_fill.config.color = Gradient::new(
                 0.0,
@@ -178,39 +172,31 @@ impl Object for PlayerSlot {
         }
 
         if let Some(value) = state {
-            if let State::RoomPlayers{players, is_host: _, playable: _} = value {
-                if let Some(id) = &players[self.index] {
-                    self.state.player = Some(id.clone());
+            if let State::RoomPlayers {
+                players,
+                host_id,
+                self_id,
+            } = value
+            {
+                if let Some(player) = &players[self.index] {
+                    self.state.player = Some(player.clone());
+                    self.state.is_host = *host_id == player.id;
+                    self.state.is_self = *self_id == player.id;
                 } else {
                     self.state.player = None;
                 }
             }
         }
 
-        self.plus.update(
-            self.as_parent_state(),
-            state,
-        );
+        self.plus.update(self.as_parent_state(), state);
 
-        self.player_name.update(
-            self.as_parent_state(),
-            state,
-        );
+        self.player_name.update(self.as_parent_state(), state);
 
-        self.host_text.update(
-            self.as_parent_state(),
-            state,
-        );
+        self.host_text.update(self.as_parent_state(), state);
 
-        self.rec_fill.update(
-            self.as_parent_state(),
-            state,
-        );
+        self.rec_fill.update(self.as_parent_state(), state);
 
-        self.rec_outline.update(
-            self.as_parent_state(),
-            state,
-        );
+        self.rec_outline.update(self.as_parent_state(), state);
 
         return None;
     }

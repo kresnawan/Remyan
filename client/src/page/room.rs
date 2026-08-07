@@ -12,20 +12,18 @@ use remyan_core::{
     RoomConfig,
     protocol::{
         command::{CommandToken, RoomCommand},
-        event::{EventToken, RoomEvent, ServerEvent},
+        event::{EventToken, RoomEvent, ServerEvent, ServerEventPlayer},
     },
 };
 
 use crate::{
     app::CardTextures,
     page::in_game::InGame,
-    state::PlayerJoinStruct,
     ui::{
         config::dimension::DynamicDimension,
         widgets::{
             button::{Button, ButtonId},
             container::Direction,
-            room_config_dialogue_box::RoomConfigDialogueBox,
             switch_button::{RoomConfigSwitchId, SwitchButton, SwitchButtonId},
             text::{HEADING_5, TextConfig},
         },
@@ -125,7 +123,7 @@ impl Page for Room {
                             ))
                             .unwrap();
                             ws.send_text(&msg);
-                            
+
                             #[cfg(target_arch = "wasm32")]
                             ws.close();
 
@@ -189,7 +187,6 @@ impl Page for Room {
 
         let deserialized = serde_json::from_str::<EventToken>(str::from_utf8(&value).unwrap());
 
-
         let Ok(token) = deserialized else {
             return None;
         };
@@ -207,30 +204,24 @@ impl Page for Room {
                 }
 
                 RoomEvent::RoomPlayer { players, host_id } => {
-                    let mut arr: Vec<Option<PlayerJoinStruct>> = Vec::new();
+                    let mut arr: Vec<Option<ServerEventPlayer>> = Vec::new();
                     for i in 0..4 {
-                        if let Some(value) = players.get(i) {
-                            arr.push(Some(PlayerJoinStruct {
-                                id: *value,
-                                name_alias: None,
-                                is_self: *value == self.player_id,
-                                is_room_host: *value == host_id,
-                            }));
-                        } else {
-                            arr.push(None);
-                        }
+                        arr.push(players.get(i).cloned());
                     }
 
                     return Some(State::RoomPlayers {
                         players: arr,
-                        is_host: self.player_id == host_id,
-                        playable: players.len() > 2,
+                        host_id: host_id,
+                        self_id: self.player_id,
                     });
                 }
 
                 RoomEvent::StartGame => {
-                    self.in_game_page =
-                        Some(InGame::new(self.card_textures.clone(), self.player_id, &self.room_config.joker));
+                    self.in_game_page = Some(InGame::new(
+                        self.card_textures.clone(),
+                        self.player_id,
+                        &self.room_config.joker,
+                    ));
                 }
                 RoomEvent::GameEnded => {
                     println!("Game selesai")

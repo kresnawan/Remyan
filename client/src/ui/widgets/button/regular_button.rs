@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use macroquad::prelude::*;
+use remyan_core::protocol::event::ServerEventPlayer;
 
 use crate::{
     state::State,
@@ -84,11 +85,7 @@ impl Object for RegularButton {
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
-    fn update(
-        &mut self,
-        parent_state: ParentState,
-        state: &Option<State>,
-    ) -> Option<State> {
+    fn update(&mut self, parent_state: ParentState, state: &Option<State>) -> Option<State> {
         self.update_parent_state(parent_state.clone());
         self.update_dimension();
         self.update_alignment();
@@ -96,9 +93,7 @@ impl Object for RegularButton {
         self.components
             .background
             .update(parent_state.clone(), state);
-        self.components
-            .shadow
-            .update(parent_state.clone(), state);
+        self.components.shadow.update(parent_state.clone(), state);
 
         self.components.shadow.position.x =
             self.components.background.position.x + self.shadow_offset;
@@ -110,10 +105,9 @@ impl Object for RegularButton {
             self.components.background.position.y = self.components.shadow.position.y;
         }
 
-        self.components.text.update(
-            self.components.background.as_parent_state(),
-            state,
-        );
+        self.components
+            .text
+            .update(self.components.background.as_parent_state(), state);
 
         self.update_hover();
 
@@ -128,23 +122,21 @@ impl Object for RegularButton {
         if let Some(state) = state {
             match state {
                 State::RoomPlayers {
-                    players: _,
-                    is_host,
-                    playable,
+                    players,
+                    host_id,
+                    self_id,
                 } => {
                     if let Some(id) = &self.id {
                         match id {
                             ButtonId::ApplyRoomConfig => {
-                                self.is_shown = *is_host;
+                                self.is_shown = host_id == self_id;
                             }
 
                             ButtonId::StartGame => {
-                                if *playable && *is_host {
-                                    self.is_disabled = false;
-                                } else {
-                                    self.is_disabled = true;
-                                }
+                                let filtered: Vec<&Option<ServerEventPlayer>> =
+                                    players.iter().filter(|item| item.is_some()).collect();
 
+                                self.is_disabled = !(filtered.len() > 2 && host_id == self_id);
                                 return Some(State::Reset);
                             }
                         }

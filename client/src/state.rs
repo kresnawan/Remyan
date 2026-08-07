@@ -1,4 +1,4 @@
-use remyan_core::{RoomConfig, protocol::command::GameCommand};
+use remyan_core::{RoomConfig, protocol::{command::GameCommand, event::ServerEventPlayer}};
 
 use crate::ui::widgets::switch_button::RoomConfigSwitchId;
 
@@ -11,9 +11,9 @@ pub enum State {
     CreateRoom,
     JoinRoom(String),
     RoomPlayers {
-        players: Vec<Option<PlayerJoinStruct>>,
-        is_host: bool,
-        playable: bool,
+        players: Vec<Option<ServerEventPlayer>>,
+        host_id: u32,
+        self_id: u32,
     },
     LeaveRoom,
     ConfigUpdate(RoomConfig),
@@ -21,13 +21,5 @@ pub enum State {
     ApplyConfig,
     Reset,
     StartGame,
-    InGameCommand(GameCommand)
-}
-
-#[derive(Clone, Debug)]
-pub struct PlayerJoinStruct {
-    pub id: u32,
-    pub name_alias: Option<String>,
-    pub is_self: bool,
-    pub is_room_host: bool,
+    InGameCommand(GameCommand),
 }

@@ -1,10 +1,9 @@
+use remyan_core::NumberOfJokers;
 use std::{collections::HashMap, process::exit, sync::Arc};
-use remyan_core::{NumberOfJokers, protocol::Error};
 
 use macroquad::{
-    color::GREEN,
     texture::{Texture2D, load_texture},
-    window::{clear_background, next_frame},
+    window::next_frame,
 };
 use quad_net::{
     http_request::{Method, Request, RequestBuilder},
@@ -16,7 +15,9 @@ use remyan_core::{CardIcon, CardType, CourtType, Deck, JokerType, RoomConfig, Sp
 use crate::console_log;
 
 use crate::{
-    page::{Page, main_menu::MainMenu, room::Room}, state::State, ui::config::font::Nunito,
+    page::{Page, main_menu::MainMenu, room::Room},
+    state::State,
+    ui::config::font::Nunito,
 };
 
 #[derive(Clone)]
@@ -117,7 +118,7 @@ impl CardTextures {
             cards,
             empty_texture,
             back_texture,
-            arrow_texture
+            arrow_texture,
         }
     }
 
@@ -232,7 +233,7 @@ impl App {
                 if let Ok(response) = &value {
                     println!("{}", response);
                     match WebSocket::connect(format!(
-                        "ws://localhost:6767/ws/connect?room_id={}&player_id={}",
+                        "ws://localhost:6767/ws/connect?room_id={}&player_id={}&name_alias=kerenoy",
                         room_id,
                         self.player_id.unwrap()
                     )) {
@@ -242,7 +243,7 @@ impl App {
                                     ws,
                                     room_id.clone(),
                                     self.player_id.unwrap(),
-                                    self.card_textures.as_ref().unwrap().clone()
+                                    self.card_textures.as_ref().unwrap().clone(),
                                 )
                                 .load_ui(self.font.clone()),
                             ))
@@ -272,7 +273,7 @@ impl App {
                     Ok(response) => {
                         println!("{}", response);
                         if let Ok(ws) = WebSocket::connect(String::from(format!(
-                            "ws://localhost:6767/ws/connect?room_id={}&player_id={}",
+                            "ws://localhost:6767/ws/connect?room_id={}&player_id={}&name_alias=keren",
                             response.clone(),
                             self.player_id.unwrap()
                         ))) {
@@ -281,7 +282,7 @@ impl App {
                                     ws,
                                     response,
                                     self.player_id.unwrap(),
-                                    self.card_textures.as_ref().unwrap().clone()
+                                    self.card_textures.as_ref().unwrap().clone(),
                                 )
                                 .load_ui(self.font.clone()),
                             ))
@@ -314,7 +315,7 @@ impl App {
                 State::CreateRoom => {
                     let room_config = RoomConfig::default();
                     let room_config_str = serde_json::to_string(&room_config).unwrap();
-                    
+
                     #[cfg(target_arch = "wasm32")]
                     let req = RequestBuilder::new("http://localhost:6767/room/create")
                         .method(Method::Post)
@@ -329,7 +330,7 @@ impl App {
                         .header("Content-Type", "application/json")
                         .body(&room_config_str)
                         .send();
-                    
+
                     self.create_room_request = Some(req);
                     self.game_state = GameState::Loading(Loading::CreateRoom);
                     self.global_state = None;

@@ -206,26 +206,11 @@ impl Object for SwitchButton {
                         _ => {}
                     },
                 }
-
-                // if let Some(SwitchButtonId::RoomConfig(RoomConfigSwitchId::WithJoker(_))) = self.id
-                // {
-                //     return Some(State::Reset);
-                // }
             }
 
-            State::RoomPlayers {
-                players: _,
-                is_host,
-                playable: _
-            } => {
-                if !is_host {
+            State::RoomPlayers { players: _, host_id, self_id } => {
+                if !host_id == *self_id {
                     self.state.is_disabled = true;
-
-                    // if let Some(SwitchButtonId::RoomConfig(RoomConfigSwitchId::WithJoker(_))) =
-                    //     self.id
-                    // {
-                    //     return Some(State::Reset);
-                    // }
                 }
             }
 

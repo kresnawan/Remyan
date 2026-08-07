@@ -118,10 +118,10 @@ impl InGame {
 
     fn init_stock_pile(card_textures: Arc<CardTextures>, joker: Option<NumberOfJokers>) -> Vec<CardElement> {
         let mut result: Vec<CardElement> = Vec::new();
-        let base_number_of_card = 10;
-        // if let Some(num) = joker {
-        //     base_number_of_card += num.as_number()
-        // }
+        let mut base_number_of_card = 52;
+        if let Some(num) = joker {
+            base_number_of_card += num.as_number()
+        }
 
         for _ in 0..base_number_of_card {
             let mut new_card = CardElement::new(
