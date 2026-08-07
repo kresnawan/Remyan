@@ -10,14 +10,14 @@ use tokio::sync::Mutex;
 
 use crate::{
     AppInstance,
-    router::{RoomIdAndPlayerIdQuery, Server},
+    router::{JoinRoomWsQuery, Server},
     ws::socket_handler::handle_socket,
 };
 
 pub async fn handle_connect(
     Extension(game_app): Extension<AppInstance>,
     Extension(server): Extension<Arc<Mutex<Server>>>,
-    Query(params): Query<RoomIdAndPlayerIdQuery>,
+    Query(params): Query<JoinRoomWsQuery>,
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
     let player_id: u32;
@@ -46,5 +46,5 @@ pub async fn handle_connect(
         }
     }
 
-    ws.on_upgrade(move |socket| handle_socket(socket, game_app, server, player_id, room_id))
+    ws.on_upgrade(move |socket| handle_socket(socket, game_app, server, player_id, room_id, params.name_alias))
 }

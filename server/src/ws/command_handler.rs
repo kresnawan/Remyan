@@ -1,13 +1,10 @@
 use std::time::Duration;
 
 use axum::extract::ws::Utf8Bytes;
-use remyan_core::{
-    TurnType,
-    protocol::{
-        DrawSource, Error,
-        command::{CommandToken, GameCommand, RoomCommand, TurnCommand},
-        event::{EventToken, GameEvent, RoomEvent, ServerEvent, TurnEvent},
-    },
+use remyan_core::protocol::{
+    DrawSource, Error,
+    command::{CommandToken, GameCommand, RoomCommand, TurnCommand},
+    event::{EventToken, GameEvent, RoomEvent, ServerEvent, TurnEvent},
 };
 
 use crate::{AppInstance, ServerInstance, ws::command_parser::parse_command};
@@ -118,7 +115,7 @@ pub async fn handle_game_command(
         let current_counter: Option<u32> = {
             let mut server_instance = server.lock().await;
             let server_room = server_instance.rooms.get_mut(&room_id).unwrap();
-            
+
             let mut instance = app.lock().await;
             let room = instance.room_manager.rooms.get_mut(&room_id).unwrap();
 
@@ -254,9 +251,9 @@ pub async fn handle_game_command(
                 },
             }
 
-            let ho = room.check_current_turn();
+            let turn_type = room.check_current_turn();
 
-            if let Some(_) = ho {
+            if let Some(_) = turn_type {
                 room.current_turn.reset();
                 let ph = room.get_players_hand();
                 server_room
@@ -270,10 +267,10 @@ pub async fn handle_game_command(
                 server_room
                     .broadcast(true, player_id, EventToken::RoomEvent(RoomEvent::GameEnded))
                     .await;
+
+                println!("{:#?}", room.players);
                 return;
             }
-
-            println!("{:?}", ho);
 
             Some(room.counter)
         };

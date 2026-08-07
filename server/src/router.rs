@@ -1,12 +1,21 @@
 use std::{collections::HashMap, sync::Arc};
 
-use axum::{Extension, Router, http::{self, HeaderValue, Method, header::{CONTENT_TYPE, COOKIE}}, routing::get};
+use axum::{
+    Extension, Router,
+    http::{
+        HeaderValue, Method,
+        header::{CONTENT_TYPE, COOKIE},
+    },
+    routing::get,
+};
 use serde::Deserialize;
 use tokio::sync::Mutex;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::CorsLayer;
 
 use crate::{
-    AppInstance, route::{auth, room, ws}, server_room::ServerRoom,
+    AppInstance,
+    route::{auth, room, ws},
+    server_room::ServerRoom,
 };
 
 #[derive(Deserialize)]
@@ -20,9 +29,10 @@ pub struct RoomIdQuery {
 }
 
 #[derive(Deserialize)]
-pub struct RoomIdAndPlayerIdQuery {
+pub struct JoinRoomWsQuery {
     pub room_id: String,
     pub player_id: String,
+    pub name_alias: String
 }
 
 pub struct Server {
@@ -37,7 +47,13 @@ impl Server {
     }
     pub async fn init(server: Arc<Mutex<Server>>, core_app: AppInstance) {
         let cors = CorsLayer::new()
-            .allow_methods([Method::GET, Method::POST, Method::DELETE, Method::PUT, Method::OPTIONS])
+            .allow_methods([
+                Method::GET,
+                Method::POST,
+                Method::DELETE,
+                Method::PUT,
+                Method::OPTIONS,
+            ])
             .allow_origin("http://localhost".parse::<HeaderValue>().unwrap())
             .allow_credentials(true)
             .allow_headers([COOKIE, CONTENT_TYPE]);

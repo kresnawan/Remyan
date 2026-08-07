@@ -1,6 +1,6 @@
 use axum::extract::ws::{Message, WebSocket};
 use futures_util::{SinkExt, StreamExt};
-use remyan_core::protocol::event::{EventToken, RoomEvent};
+use remyan_core::protocol::event::{EventToken, RoomEvent, ServerEventPlayer};
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
@@ -15,6 +15,7 @@ pub async fn handle_socket(
     server: ServerInstance,
     player_id: u32,
     room_id: [u8; 6],
+    name_alias: String,
 ) {
     println!(
         "Pemain dengan id {player_id} telah terkoneksi ke room: {}",
@@ -26,19 +27,38 @@ pub async fn handle_socket(
 
     {
         let mut server_instance = server.lock().await;
-        let app_instance = app.lock().await;
+        let mut app_instance = app.lock().await;
 
-        let app_room = app_instance.room_manager.rooms.get(&room_id).unwrap();
+        let app_room = app_instance.room_manager.rooms.get_mut(&room_id).unwrap();
         let room = server_instance.rooms.get_mut(&room_id).unwrap();
+
+        let player = app_room.players.get_mut(&player_id).unwrap();
+        player.name_alias = name_alias;
+
+        let mapped_players: Vec<ServerEventPlayer> = app_room
+            .players
+            .iter()
+            .clone()
+            .map(|(id, player)| ServerEventPlayer {
+                id: *id,
+                name_alias: player.name_alias.clone(),
+                score: player.current_score
+            })
+            .collect();
 
         room.txs.insert(player_id, Some(tx));
         room.broadcast(
             true,
             player_id,
             EventToken::RoomEvent(RoomEvent::RoomPlayer {
-                players: app_room.player_turns.clone(),
+                players: mapped_players,
                 host_id: app_room.host_id,
             }),
+        )
+        .await;
+        room.send_player(
+            EventToken::RoomEvent(RoomEvent::RoomConfig(app_room.config.clone())),
+            player_id,
         )
         .await;
     }
@@ -107,12 +127,23 @@ pub async fn handle_socket(
 
                 let app_room = app_instance.room_manager.rooms.get(&room_id).unwrap();
 
+                let mapped_players: Vec<ServerEventPlayer> = app_room
+                    .players
+                    .iter()
+                    .clone()
+                    .map(|(id, player)| ServerEventPlayer {
+                        id: *id,
+                        name_alias: player.name_alias.clone(),
+                        score: player.current_score
+                    })
+                    .collect();
+
                 server_room
                     .broadcast(
                         true,
                         1,
                         EventToken::RoomEvent(RoomEvent::RoomPlayer {
-                            players: app_room.player_turns.clone(),
+                            players: mapped_players,
                             host_id: app_room.host_id,
                         }),
                     )
