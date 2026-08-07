@@ -9,10 +9,11 @@ pub enum EventToken {
     ServerEvent(ServerEvent),
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ServerEventPlayer {
     pub id: u32,
-    pub name_alias: String
+    pub name_alias: String,
+    pub score: i32
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -24,10 +25,9 @@ pub enum ServerEvent {
 pub enum RoomEvent {
     StartGame,
     Message { message: String, sender_id: u32 },
-    RoomPlayer{ players: Vec<u32>, host_id: u32 },
+    RoomPlayer{ players: Vec<ServerEventPlayer>, host_id: u32 },
     RoomConfig(RoomConfig),
     GameEnded,
-    
 }
 
 #[derive(Deserialize, Serialize, Debug)]

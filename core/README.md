@@ -1,2 +1,2 @@
 # Remyan Core
-This crate includes all game's core logic.
+A modular crate as shared-library for both remyan-client and remyan-server to communicate smoothly

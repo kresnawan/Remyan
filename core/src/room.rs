@@ -34,6 +34,214 @@ pub enum TurnType {
     IsClosing,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ce_1() {
+        assert_eq!(
+            Room::check_card_eligibility_ex_2(
+                &Card {
+                    card_icon: Some(CardIcon::Spade),
+                    card_type: CardType::Spot(SpotNumber::Seven),
+                },
+                &vec![
+                    Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Six)),
+                    Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Five)),
+                ],
+                true,
+                false,
+            ),
+            Some(vec![
+                Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Five)),
+                Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Six)),
+            ])
+        );
+    }
+
+    #[test]
+    fn ce_2() {
+        assert_eq!(
+            Room::check_card_eligibility_ex_2(
+                &Card {
+                    card_icon: Some(CardIcon::Spade),
+                    card_type: CardType::Spot(SpotNumber::Six),
+                },
+                &vec![
+                    Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Seven)),
+                    Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Five)),
+                ],
+                true,
+                false,
+            ),
+            Some(vec![
+                Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Five)),
+                Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Seven)),
+            ])
+        );
+    }
+
+    #[test]
+    fn ce_3() {
+        assert_eq!(
+            Room::check_card_eligibility_ex_2(
+                &Card {
+                    card_icon: Some(CardIcon::Spade),
+                    card_type: CardType::Spot(SpotNumber::Eight),
+                },
+                &vec![
+                    Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Six)),
+                    Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Five)),
+                ],
+                true,
+                false,
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn ce_4() {
+        assert_eq!(
+            Room::check_card_eligibility_ex_2(
+                &Card {
+                    card_icon: Some(CardIcon::Spade),
+                    card_type: CardType::Spot(SpotNumber::Four),
+                },
+                &vec![
+                    Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Seven)),
+                    Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Six)),
+                    Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Five)),
+                ],
+                true,
+                false,
+            ),
+            Some(vec![
+                Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Five)),
+                Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Six)),
+                Card::new(Some(CardIcon::Spade), CardType::Spot(SpotNumber::Seven)),
+            ])
+        );
+    }
+
+    #[test]
+    fn ce_5() {
+        assert_eq!(
+            Room::check_card_eligibility_ex_2(
+                &Card::new(Some(CardIcon::Spade), CardType::Court(CourtType::King)),
+                &vec![
+                    Card::new(Some(CardIcon::Spade), CardType::Court(CourtType::Jack)),
+                    Card::new(Some(CardIcon::Spade), CardType::Court(CourtType::Queen)),
+                ],
+                true,
+                false,
+            ),
+            Some(vec![
+                Card::new(Some(CardIcon::Spade), CardType::Court(CourtType::Jack)),
+                Card::new(Some(CardIcon::Spade), CardType::Court(CourtType::Queen)),
+            ])
+        );
+    }
+
+    #[test]
+    fn ce_6() {
+        assert_eq!(
+            Room::check_card_eligibility_ex_2(
+                &Card::new(Some(CardIcon::Spade), CardType::Court(CourtType::Queen)),
+                &vec![
+                    Card::new(Some(CardIcon::Spade), CardType::Court(CourtType::Jack)),
+                    Card::new(Some(CardIcon::Spade), CardType::Court(CourtType::King)),
+                ],
+                true,
+                false,
+            ),
+            Some(vec![
+                Card::new(Some(CardIcon::Spade), CardType::Court(CourtType::Jack)),
+                Card::new(Some(CardIcon::Spade), CardType::Court(CourtType::King)),
+            ])
+        );
+    }
+
+    #[test]
+    fn ce_7() {
+        assert_eq!(
+            Room::check_card_eligibility_ex_2(
+                &Card::new(Some(CardIcon::Spade), CardType::Ace),
+                &vec![
+                    Card::new(Some(CardIcon::Heart), CardType::Ace),
+                    Card::new(Some(CardIcon::Diamond), CardType::Ace),
+                ],
+                false,
+                false,
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn ce_8() {
+        assert_eq!(
+            Room::check_card_eligibility_ex_2(
+                &Card::new(Some(CardIcon::Spade), CardType::Ace),
+                &vec![
+                    Card::new(Some(CardIcon::Heart), CardType::Ace),
+                    Card::new(Some(CardIcon::Diamond), CardType::Ace),
+                ],
+                true,
+                false,
+            ),
+            Some(vec![
+                Card::new(Some(CardIcon::Heart), CardType::Ace),
+                Card::new(Some(CardIcon::Diamond), CardType::Ace),
+            ])
+        );
+    }
+
+    #[test]
+    fn ce_9() {
+        assert_eq!(
+            Room::check_card_eligibility_ex_2(
+                &Card::new(Some(CardIcon::Spade), CardType::Ace),
+                &vec![
+                    Card::new(Some(CardIcon::Heart), CardType::Ace),
+                    Card::new(Some(CardIcon::Diamond), CardType::Ace),
+                    Card::new(Some(CardIcon::Club), CardType::Ace),
+                ],
+                false,
+                false,
+            ),
+            Some(vec![
+                Card::new(Some(CardIcon::Heart), CardType::Ace),
+                Card::new(Some(CardIcon::Diamond), CardType::Ace),
+                Card::new(Some(CardIcon::Club), CardType::Ace),
+            ])
+        );
+    }
+
+    #[test]
+    fn ce_10() {
+        assert_eq!(
+            Room::check_card_eligibility_ex_2(
+                &Card::new(Some(CardIcon::Spade), CardType::Court(CourtType::Jack)),
+                &vec![
+                    Card::new(Some(CardIcon::Heart), CardType::Court(CourtType::Jack)),
+                    Card::new(Some(CardIcon::Diamond), CardType::Court(CourtType::Jack)),
+                    Card::new(Some(CardIcon::Club), CardType::Court(CourtType::Jack)),
+                ],
+                false,
+                true,
+            ),
+            Some(vec![
+                Card::new(Some(CardIcon::Heart), CardType::Court(CourtType::Jack)),
+                Card::new(Some(CardIcon::Diamond), CardType::Court(CourtType::Jack)),
+                Card::new(Some(CardIcon::Club), CardType::Court(CourtType::Jack)),
+            ])
+        );
+    }
+}
+
+
 #[derive(Debug)]
 pub struct Room {
     pub deck: Deck,
@@ -85,62 +293,14 @@ impl Room {
     #[cfg(feature = "server")]
     fn share_cards(&mut self) {
         self.deck.shuffle();
+        let hand_size = { if self.players.len() == 4 { 6 } else { 7 } };
         // Share cards
-        for (_, obj) in self.players.iter_mut() {
-            for _ in 0..6 {
+        for (_, player) in self.players.iter_mut() {
+            for _ in 0..hand_size {
                 let card = self.deck.cards.pop().unwrap();
-                obj.hand_cards.push(card);
+                player.hand_cards.push(card);
             }
         }
-
-        // Put all cards left into the stock pile
-        while let Some(n) = self.deck.cards.pop() {
-            self.stock_pile.push(n);
-        }
-    }
-
-    #[cfg(feature = "server")]
-    fn share_cards_test(&mut self) {
-        let mut p1_cards = vec![
-            Card::new(Some(CardIcon::Diamond), CardType::Spot(SpotNumber::Two)),
-            Card::new(Some(CardIcon::Diamond), CardType::Spot(SpotNumber::Four)),
-            Card::new(Some(CardIcon::Club), CardType::Spot(SpotNumber::Four)),
-        ];
-
-        let mut p2_cards = vec![
-            Card::new(Some(CardIcon::Diamond), CardType::Court(CourtType::Jack)),
-            Card::new(Some(CardIcon::Heart), CardType::Court(CourtType::King)),
-            Card::new(Some(CardIcon::Club), CardType::Spot(SpotNumber::Seven)),
-        ];
-
-        let mut p3_cards = vec![
-            Card::new(Some(CardIcon::Club), CardType::Court(CourtType::King)),
-            Card::new(Some(CardIcon::Club), CardType::Spot(SpotNumber::Five)),
-            Card::new(Some(CardIcon::Club), CardType::Spot(SpotNumber::Three)),
-        ];
-        // Share cards
-        for i in self.player_turns.iter().enumerate() {
-            let player = self.players.get_mut(&i.1).unwrap();
-            match i.0 {
-                0 => {
-                    player.hand_cards.append(&mut p1_cards);
-                }
-                1 => {
-                    player.hand_cards.append(&mut p2_cards);
-                }
-                2 => {
-                    player.hand_cards.append(&mut p3_cards);
-                }
-
-                _ => {}
-            }
-        }
-
-        self.deck.cards.clear();
-        self.deck.cards.push(Card::new(
-            Some(CardIcon::Diamond),
-            CardType::Spot(SpotNumber::Three),
-        ));
 
         // Put all cards left into the stock pile
         while let Some(n) = self.deck.cards.pop() {
@@ -164,13 +324,7 @@ impl Room {
 
         println!("Game dimulai");
         self.currently_playing = true;
-        self.share_cards_test();
-
-        if self.games.len() == 0 {
-            let game = CardGame::new(self.config.clone());
-
-            self.games.insert(game_id, game);
-        }
+        self.share_cards();
 
         return Ok(());
     }
@@ -206,11 +360,67 @@ impl Room {
         return Ok(self.player_turns.len());
     }
 
-    pub fn calculate_game_result(&mut self) {
-        for (index, player) in &mut self.players {
-            for card in &player.hand_cards {
+    pub fn calculate_melded_cards(&mut self) {
+        for (_, player) in &mut self.players {
+            let flattened_melded: Vec<&Card> = player.melded_cards.iter().flatten().collect();
 
+            for card in flattened_melded {
+                player.current_score += card.get_meld_weight() as i32;
             }
+        }
+    }
+
+    pub fn calculate_hand_cards(&mut self) {
+        for id in &self.player_turns {
+            let player = self.players.get_mut(id).unwrap();
+            if player.hand_cards.is_empty() {
+                continue;
+            }
+
+            let mut hand_cards = std::mem::take(&mut player.hand_cards);
+
+            let mut unmeldable = Vec::new();
+            let mut meldable = Vec::new();
+
+            while let Some(pivot) = hand_cards.pop() {
+                let elig = Room::check_card_eligibility_ex_2(
+                    &pivot,
+                    &hand_cards,
+                    !player.melded_cards.is_empty(),
+                    self.config.allow_railing,
+                );
+
+                if let Some(mut cards) = elig {
+                    let mut indexed: Vec<usize> = cards
+                        .iter()
+                        .filter_map(|item| hand_cards.iter().position(|c| c == item))
+                        .collect();
+
+                    indexed.sort_by(|a, b| b.cmp(a));
+                    indexed.iter().for_each(|ind| {
+                        hand_cards.remove(*ind);
+                    });
+
+                    cards.push(pivot);
+                    meldable.push(cards);
+                } else {
+                    unmeldable.push(pivot);
+                }
+            }
+
+            let mut meldable_flatten: Vec<Card> = meldable.into_iter().flatten().collect();
+
+            for i in &meldable_flatten {
+                player.current_score += i.get_meld_weight() as i32;
+            }
+
+            for i in &unmeldable {
+                player.current_score -= i.get_unmelded_weight() as i32;
+            }
+
+            unmeldable.append(&mut meldable_flatten);
+
+            player.hand_cards = unmeldable;
         }
     }
 
@@ -227,9 +437,30 @@ impl Room {
                         }
                     }
                 }
+
+                if let Some(card) = self.current_turn.discarded_card {
+                    let hit_weight = card.get_hit_weight();
+
+                    for i in players_got_hit {
+                        let player = self.players.get_mut(&i).unwrap();
+                        player.current_score -= hit_weight as i32;
+                    }
+
+                    if self.config.hitter_scoring {
+                        let player = self.players.get_mut(&self.current_turn_id()).unwrap();
+                        player.current_score += hit_weight as i32;
+                    }
+                }
+
+                self.calculate_hand_cards();
+                self.calculate_melded_cards();
+
                 return Some(TurnType::IsHit);
             } else if self.current_turn.draw_source == Some(DrawSource::StockPile) {
                 self.current_turn.is_closing = true;
+
+                self.calculate_hand_cards();
+                self.calculate_melded_cards();
 
                 return Some(TurnType::IsClosing);
             }
@@ -601,6 +832,162 @@ impl Room {
         }
 
         None
+    }
+
+    //////////////////////////////////////
+    //
+    // Because it returns the meld result as well, we assume that param `card` is outside player's hand
+    //
+
+    pub fn check_card_eligibility_ex_2(
+        card: &Card,
+        hand: &Vec<Card>,
+        is_melding: bool,
+        allow_railing: bool,
+    ) -> Option<Vec<Card>> {
+        if allow_railing {
+            let current_icon_number = card.card_icon.unwrap().as_number();
+            let mut is_eligible = true;
+
+            let mut res_cards = Vec::new();
+
+            for i in 1..=3 {
+                let target = (current_icon_number + i) % 4;
+                let equal_card = hand.iter().find(|item| {
+                    item == &&Card::new(CardIcon::from_number(target), card.card_type)
+                });
+
+                if let Some(card) = equal_card {
+                    res_cards.push(card.clone());
+                    continue;
+                } else {
+                    is_eligible = false;
+                    break;
+                }
+            }
+
+            if is_eligible {
+                return Some(res_cards);
+            }
+        }
+
+        match card.card_type {
+            CardType::Spot(_) => {
+                let spot_number_iter: Vec<SpotNumber> = SpotNumber::iter().collect();
+                let spot_index = card.get_spot_index().unwrap();
+                let mut res_cards = Vec::new();
+
+                let start_index = spot_index.saturating_sub(3);
+                let end_index = std::cmp::min(spot_index + 3, spot_number_iter.len() - 1);
+
+                for i in start_index..=end_index {
+                    let sample_card = Card {
+                        card_icon: card.card_icon,
+                        card_type: CardType::Spot(*spot_number_iter.get(i).unwrap()),
+                    };
+
+                    if &sample_card == card {
+                        continue;
+                    }
+
+                    let found_card = hand.iter().find(|item| item == &&sample_card).or_else(|| {
+                        hand.iter().find(|item| {
+                            item == &&Card::joker(sample_card.get_color_type().unwrap())
+                        })
+                    });
+
+                    if let Some(matched) = found_card {
+                        if i >= spot_index + 2 && res_cards.is_empty() {
+                            break;
+                        } else {
+                            res_cards.push(matched.clone());
+                            if res_cards.len() == 3 {
+                                break;
+                            }
+                        }
+                    } else {
+                        if res_cards.len() < 2 {
+                            res_cards.clear();
+                        } else {
+                            if i < spot_index {
+                                res_cards.clear();
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                if res_cards.len() >= 2 {
+                    return Some(res_cards);
+                } else {
+                    return None;
+                }
+            }
+            CardType::Ace => {
+                let mut res_cards = Vec::new();
+
+                for i in hand {
+                    if let CardType::Ace = i.card_type {
+                        res_cards.push(i.clone());
+                    }
+                }
+
+                if is_melding {
+                    if res_cards.len() >= 2 {
+                        return Some(res_cards);
+                    }
+                } else {
+                    if res_cards.len() >= 3 {
+                        return Some(res_cards);
+                    }
+                }
+
+                return None;
+            }
+            CardType::Court(_) => {
+                let court_type_iter: Vec<CourtType> = CourtType::iter().collect();
+                let court_index = card.get_court_index().unwrap();
+                let mut res_cards = Vec::new();
+
+                let start_index = court_index.saturating_sub(2);
+                let end_index = std::cmp::min(court_index + 2, court_type_iter.len() - 1);
+
+                for i in start_index..=end_index {
+                    let sample_card = Card {
+                        card_icon: card.card_icon,
+                        card_type: CardType::Court(*court_type_iter.get(i).unwrap()),
+                    };
+
+                    if &sample_card == card {
+                        continue;
+                    }
+
+                    let found_card = hand.iter().find(|item| item == &&sample_card);
+
+                    if let Some(matched) = found_card {
+                        res_cards.push(matched.clone());
+                        if res_cards.len() == 2 {
+                            break;
+                        }
+                    } else {
+                        if res_cards.len() < 2 {
+                            res_cards.clear();
+                        } else {
+                            break;
+                        }
+                    }
+                }
+
+                if res_cards.len() >= 2 {
+                    return Some(res_cards);
+                } else {
+                    return None;
+                }
+            }
+            CardType::Joker(_) => {
+                return None;
+            }
+        }
     }
 
     pub fn edit_config(&mut self, new_config: RoomConfig, player_id: u32) -> Result<(), Error> {
